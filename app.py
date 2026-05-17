@@ -5,6 +5,7 @@ import io
 import json
 import random
 import time
+import base64
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -34,11 +35,11 @@ MAIN_QF = [
 ]
 
 SIDE_R1 = [
-    ("N1", "Nebenfeld Runde 1 - Spiel 1", 0, 1),
-    ("N2", "Nebenfeld Runde 1 - Spiel 2", 2, 3),
-    ("N3", "Nebenfeld Runde 1 - Spiel 3", 4, 5),
-    ("N4", "Nebenfeld Runde 1 - Spiel 4", 6, 7),
-    ("N5", "Nebenfeld Runde 1 - Spiel 5", 8, 9),
+    ("N1", "Spiel 1", 0, 1),
+    ("N2", "Spiel 2", 2, 3),
+    ("N3", "Spiel 3", 4, 5),
+    ("N4", "Spiel 4", 6, 7),
+    ("N5", "Spiel 5", 8, 9),
 ]
 
 STATUS_OPTIONS = ["offen", "angesetzt", "laeuft", "fertig", "verschoben"]
@@ -86,6 +87,8 @@ def default_data() -> dict[str, Any]:
             "projector_view": "Automatisch",
             "projector_auto_started_at": 0.0,
             "projector_auto_start_view": "Gruppenphase",
+            "projector_zoom": 1.0,
+            "projector_background": "",
             "group_locked": False,
             "draw_done": False,
             "drawn_at": "",
@@ -156,6 +159,8 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized["side"]["slot_overrides"] = (normalized["side"].get("slot_overrides", []) + [""] * 10)[:10]
     normalized["settings"].setdefault("projector_auto_started_at", 0.0)
     normalized["settings"].setdefault("projector_auto_start_view", "Gruppenphase")
+    normalized["settings"].setdefault("projector_zoom", 1.0)
+    normalized["settings"].setdefault("projector_background", "")
     normalized["settings"].setdefault("bracket_pdf_path", "")
     normalized.setdefault("schedule", {})
     normalized.setdefault("custom_schedule", [])
@@ -175,8 +180,20 @@ def save_data(data: dict[str, Any]) -> None:
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def reset_tournament_state() -> dict[str, Any]:
+def reset_tournament_state(current: dict[str, Any] | None = None) -> dict[str, Any]:
     fresh = default_data()
+    if current:
+        for config in GROUP_CONFIG:
+            group_id = config["id"]
+            old_group = current.get("groups", {}).get(group_id, {})
+            fresh["groups"][group_id]["name"] = old_group.get("name", fresh["groups"][group_id]["name"])
+            old_names = {team.get("id"): team.get("name") for team in old_group.get("teams", [])}
+            for team in fresh["groups"][group_id]["teams"]:
+                if old_names.get(team["id"]):
+                    team["name"] = old_names[team["id"]]
+        for key in ["event_title", "projector_zoom", "projector_background"]:
+            if key in current.get("settings", {}):
+                fresh["settings"][key] = current["settings"][key]
     save_data(fresh)
     try:
         if BRACKET_PDF_FILE.exists():
@@ -212,6 +229,43 @@ def css() -> None:
         .stApp {
             background: linear-gradient(180deg, #f7f9fd 0%, #eef3f8 100%);
             color: var(--ink);
+        }
+
+        .stApp,
+        .stApp p,
+        .stApp label,
+        .stApp span,
+        .stApp div {
+            color: #111827;
+        }
+
+        .stButton button,
+        .stDownloadButton button,
+        div[data-testid="stBaseButton-secondary"] button {
+            background: #ffffff !important;
+            border: 1px solid var(--line) !important;
+            color: #111827 !important;
+        }
+
+        .stButton button:hover,
+        .stDownloadButton button:hover,
+        div[data-testid="stBaseButton-secondary"] button:hover,
+        div[data-testid="stExpander"]:hover,
+        div[data-baseweb="select"] > div:hover,
+        input:hover,
+        textarea:hover {
+            background: #ffffff !important;
+            border-color: var(--blue) !important;
+            color: #111827 !important;
+            box-shadow: 0 0 0 1px rgba(31, 111, 235, 0.18) !important;
+        }
+
+        div[data-testid="stExpander"],
+        div[data-baseweb="select"] > div,
+        input,
+        textarea {
+            background: #ffffff !important;
+            color: #111827 !important;
         }
 
         .block-container {
@@ -280,6 +334,10 @@ def css() -> None:
 
         .tie-row td {
             background: #fff7e6;
+        }
+
+        .tiebreak-star-row td {
+            background: #ffffff;
         }
 
         .bracket {
@@ -403,10 +461,6 @@ def css() -> None:
             font-weight: 750;
         }
 
-        .wildcard {
-            box-shadow: inset 4px 0 0 var(--amber), 0 2px 7px rgba(16, 24, 40, 0.12);
-        }
-
         .direct-final {
             box-shadow: inset 4px 0 0 var(--green), 0 2px 7px rgba(16, 24, 40, 0.12);
         }
@@ -496,11 +550,6 @@ def css() -> None:
         .projector-table th,
         .projector-table td {
             padding: 5px 6px;
-        }
-
-        .projector-table th:nth-child(4),
-        .projector-table td:nth-child(4) {
-            display: none;
         }
 
         .bracket.projector-bracket-single {
@@ -729,18 +778,6 @@ def css() -> None:
             z-index: 3;
         }
 
-        .tree-badge {
-            background: #11a6d9;
-            border-radius: 3px;
-            color: #ffffff;
-            display: inline-block;
-            font-size: 0.62rem;
-            font-weight: 800;
-            margin-left: 5px;
-            padding: 1px 5px;
-            text-transform: uppercase;
-        }
-
         .projector-shell {
             min-height: 640px;
         }
@@ -749,12 +786,14 @@ def css() -> None:
             height: auto;
         }
 
-        .projector-groups-fit {
+        .projector-groups-content {
             align-content: center;
             display: flex;
             flex-direction: column;
             gap: 18px;
+            height: 100%;
             justify-content: center;
+            width: 100%;
         }
 
         .projector-row {
@@ -784,11 +823,16 @@ def css() -> None:
 
         .projector-qualification {
             align-items: stretch;
+            height: calc(100vh - 120px);
+            padding: 18px;
+        }
+
+        .projector-qualification-content {
             display: grid;
             gap: 24px;
             grid-template-columns: 1fr 1fr;
-            height: calc(100vh - 120px);
-            padding: 18px;
+            height: 100%;
+            width: 100%;
         }
 
         .projector-qualification section {
@@ -827,12 +871,14 @@ def css() -> None:
 
         section[data-testid="stSidebar"] [data-testid="stRadio"] label {
             background: transparent;
+            border: 1px solid transparent;
             border-radius: 8px;
             padding: 4px 6px;
         }
 
         section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-            background: #101d31;
+            background: transparent !important;
+            border-color: #37a6ff;
         }
 
         .beamer-link {
@@ -905,9 +951,6 @@ def css() -> None:
             transform-origin: top left;
         }
 
-        header[data-testid="stHeader"], div[data-testid="stToolbar"] {
-            display: none;
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1144,16 +1187,18 @@ def render_table(headers: list[str], rows: list[list[Any]], row_classes: list[st
 def standings_table_parts(data: dict[str, Any], group_id: str, compact: bool = False) -> tuple[list[str], list[list[Any]], list[str]]:
     group = data["groups"][group_id]
     standings, tie_ids = calculate_standings(data, group_id)
+    tiebreak_qualifiers = [team_id for team_id in group.get("tiebreak_qualifiers", []) if team_id in tie_ids]
     rows: list[list[Any]] = []
     classes: list[str] = []
     for rank, row in enumerate(standings, start=1):
+        team_display = row["team"] + (" *" if row["id"] in tie_ids and tiebreak_qualifiers else "")
         if compact:
-            rows.append([rank, row["team"], row["played"], f'{row["total"]:g}'])
+            rows.append([rank, team_display, row["played"], f'{row["total"]:g}'])
         else:
             rows.append(
                 [
                     rank,
-                    row["team"],
+                    team_display,
                     row["played"],
                     row["wins"],
                     row["draws"],
@@ -1163,7 +1208,9 @@ def standings_table_parts(data: dict[str, Any], group_id: str, compact: bool = F
                     f'{row["total"]:g}',
                 ]
             )
-        if row["id"] in tie_ids:
+        if row["id"] in tie_ids and tiebreak_qualifiers:
+            classes.append("qualified-row tiebreak-star-row" if row["id"] in tiebreak_qualifiers else "tiebreak-star-row")
+        elif row["id"] in tie_ids:
             classes.append("tie-row")
         elif rank <= group["qualifiers"]:
             classes.append("qualified-row")
@@ -1280,8 +1327,7 @@ def html_match_card(data: dict[str, Any], match: dict[str, Any]) -> str:
     score_a = match.get("score_a")
     score_b = match.get("score_b")
     winner = match.get("winner", "")
-    extra = " wildcard" if match.get("wildcard") else ""
-    extra += " direct-final" if match.get("direct_final") else ""
+    extra = " direct-final" if match.get("direct_final") else ""
 
     def row(team_id: str, score: Any) -> str:
         winner_class = " winner" if team_id and team_id == winner else ""
@@ -1315,14 +1361,12 @@ def tree_match_html(
     left: int,
     top: int,
     compact: bool = False,
-    badge: str = "",
 ) -> str:
     winner = match.get("winner", "")
     team_a = match.get("team_a", "")
     team_b = match.get("team_b", "")
     class_name = "tree-match compact" if compact else "tree-match"
     title = escape(match.get("label", match.get("id", "")))
-    badge_html = f'<span class="tree-badge">{escape(badge)}</span>' if badge else ""
     info_bits = [str(match.get("time", "")).strip(), str(match.get("place", "")).strip()]
     info_text = " · ".join(bit for bit in info_bits if bit)
     info_html = f'<div class="tree-info">{escape(info_text)}</div>' if match.get("show_info") and info_text else ""
@@ -1339,7 +1383,7 @@ def tree_match_html(
 
     return (
         f'<div class="{class_name}" style="left:{left}px; top:{top}px;">'
-        f'<div class="tree-match-title">{title}{badge_html}</div>'
+        f'<div class="tree-match-title">{title}</div>'
         f'{row(team_a, "A")}{row(team_b, "B")}{info_html}</div>'
     )
 
@@ -1392,14 +1436,14 @@ def render_side_tree(data: dict[str, Any], projector: bool = False) -> None:
     rounds = build_side_state(data)
     matches = {match["id"]: match for _, round_matches in rounds for match in round_matches}
     cards = [
-        tree_match_html(data, matches["N1"], 20, 70, compact=True, badge="frei"),
+        tree_match_html(data, matches["N1"], 20, 70, compact=True),
         tree_match_html(data, matches["N2"], 20, 165, compact=True),
         tree_match_html(data, matches["N3"], 20, 260, compact=True),
         tree_match_html(data, matches["N4"], 20, 355, compact=True),
         tree_match_html(data, matches["N5"], 20, 450, compact=True),
         tree_match_html(data, matches["NQ1"], 340, 215, compact=True),
         tree_match_html(data, matches["NWHF"], 615, 145, compact=True),
-        tree_match_html(data, matches["NQ2"], 615, 405, compact=True, badge="Halbfinale"),
+        tree_match_html(data, matches["NQ2"], 615, 405, compact=True),
         tree_match_html(data, matches["NFIN"], 875, 255),
     ]
     lines = """
@@ -1565,8 +1609,8 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
 
     wildcard_winner = r1_winners.get(wildcard_match, "")
     r2_pairs = [
-        ("NQ1", "Runde 2 - Spiel 1", r1_winners.get("N2", ""), r1_winners.get("N3", "")),
-        ("NQ2", "Runde 2 - Spiel 2", r1_winners.get("N4", ""), r1_winners.get("N5", "")),
+        ("NQ1", "Spiel 6", r1_winners.get("N2", ""), r1_winners.get("N3", "")),
+        ("NQ2", "Halbfinale", r1_winners.get("N4", ""), r1_winners.get("N5", "")),
     ]
     r2_matches: list[dict[str, Any]] = []
     r2_winners: dict[str, str] = {}
@@ -1596,7 +1640,7 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     wildcard_semi_winner = winner_from_record(wildcard_path_team, wildcard_winner, wildcard_record)
     wildcard_semi = {
         "id": "NWHF",
-        "label": "Wildcard-Halbfinale",
+        "label": "Halbfinale",
         "team_a": wildcard_path_team,
         "team_b": wildcard_winner,
         "score_a": wildcard_record.get("score_a"),
@@ -1624,34 +1668,24 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     return [
         ("Runde 1", r1_matches),
         ("Runde 2", r2_matches),
-        ("Wildcard-Weg", [wildcard_semi]),
+        ("Halbfinale", [wildcard_semi]),
         ("Finale", [side_final]),
     ]
 
 
 def setup_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Setup: Klassen, Gruppen und Bonuspunkte")
-    st.write("Hier kannst du die Klassennamen und Bonuspunkte eintragen. Die Gruppengroessen und Qualigrenzen sind so voreingestellt, wie du sie beschrieben hast.")
+    render_header(data, "Setup: Klassen und Gruppen")
+    st.write("Hier kannst du die Klassen- und Gruppennamen eintragen. Bonuspunkte bleiben in der Gruppenphase, damit alles uebersichtlich bleibt.")
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.info("Teams und Bonuspunkte sind gesperrt, weil die Felder bereits ausgelost wurden.")
+        st.info("Teams sind gesperrt, weil die Felder bereits ausgelost wurden.")
 
     for config in GROUP_CONFIG:
         group = data["groups"][config["id"]]
         with st.expander(f"{group['name']} - {config['size']} Klassen, {config['qualifiers']} ins Hauptfeld", expanded=config["id"] == "A"):
             group["name"] = st.text_input("Gruppenname", value=group["name"], key=f"setup_group_name_{config['id']}", disabled=locked)
             for team in group["teams"]:
-                cols = st.columns([4, 1])
-                with cols[0]:
-                    team["name"] = st.text_input("Klasse", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
-                with cols[1]:
-                    team["bonus"] = st.number_input(
-                        "Bonus",
-                        value=int(team.get("bonus", 0) or 0),
-                        step=1,
-                        key=f"setup_bonus_{team['id']}",
-                        disabled=locked,
-                    )
+                team["name"] = st.text_input("Klasse", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
 
     main, side = qualification_lists(data)
     st.subheader("Aktuelle Aufteilung")
@@ -1802,12 +1836,12 @@ def main_bracket_tab(data: dict[str, Any]) -> None:
 
 
 def side_bracket_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Nebenfeld: 10er-Baum mit Wildcard-Spiel")
+    render_header(data, "Nebenfeld: 10er-Baum")
     if not data["settings"].get("draw_done", False):
         st.warning("Das Nebenfeld wird erst nach der gesperrten Gruppenphase ausgelost. Gehe zu Qualifikation und gib den Code ein.")
         return
     _, side = qualification_lists(data)
-    st.caption("Die 10 Nebenfeld-Teams starten in Runde 1. Der Sieger des Wildcard-Spiels hat Runde 2 frei.")
+    st.caption("Die 10 Nebenfeld-Teams starten links und spielen sich bis zum Finale rechts durch.")
 
     auto_slots = side_auto_slots(data)
     options = [item["id"] for item in side] or all_team_ids(data)
@@ -1827,20 +1861,13 @@ def side_bracket_tab(data: dict[str, Any]) -> None:
                     )
 
     with st.expander("Sieger eintragen", expanded=False):
-        st.caption("Nach Skizze: Spiel 1 ist Wildcard/frei, der 7-10-Zweig geht direkt ins Finale.")
         state = build_side_state(data)
         for match in state[0][1]:
-            label = match["label"]
-            if match["id"] == "N1":
-                label += " (Wildcard)"
-            render_ko_match_editor(data, "side", match["id"], label, match["team_a"], match["team_b"])
+            render_ko_match_editor(data, "side", match["id"], match["label"], match["team_a"], match["team_b"])
 
         state = build_side_state(data)
         for match in state[1][1]:
-            label = match["label"]
-            if match["id"] == "NQ2":
-                label += " (Sieger direkt im Finale)"
-            render_ko_match_editor(data, "side", match["id"], label, match["team_a"], match["team_b"])
+            render_ko_match_editor(data, "side", match["id"], match["label"], match["team_a"], match["team_b"])
 
         state = build_side_state(data)
         for match in state[2][1] + state[3][1]:
@@ -2247,12 +2274,32 @@ def settings_tab(data: dict[str, Any]) -> None:
             restart_projector_auto(data, current_projector_screen(data))
             st.success("Beamer-Automatik neu gestartet.")
 
+    st.markdown("**Beamer-Layout**")
+    zoom_value = float(data["settings"].get("projector_zoom", 1.0) or 1.0)
+    data["settings"]["projector_zoom"] = st.slider(
+        "Beamer-Zoom",
+        min_value=0.50,
+        max_value=5.00,
+        value=max(0.50, min(5.00, zoom_value)),
+        step=0.05,
+    )
+    background_upload = st.file_uploader("Beamer-Hintergrundbild", type=["png", "jpg", "jpeg", "webp"])
+    if background_upload is not None:
+        mime = background_upload.type or "image/png"
+        encoded = base64.b64encode(background_upload.getvalue()).decode("ascii")
+        data["settings"]["projector_background"] = f"data:{mime};base64,{encoded}"
+        st.success("Hintergrundbild gespeichert.")
+    if data["settings"].get("projector_background"):
+        if st.button("Beamer-Hintergrund entfernen"):
+            data["settings"]["projector_background"] = ""
+            st.rerun()
+
     st.divider()
     st.markdown("**Turnier komplett zuruecksetzen**")
     reset_code = st.text_input("Reset-Code", type="password", placeholder="")
     if st.button("Alles auf null setzen"):
         if reset_code == "2611":
-            st.session_state.tournament_data = reset_tournament_state()
+            st.session_state.tournament_data = reset_tournament_state(data)
             st.success("Turnier wurde zurueckgesetzt.")
             st.rerun()
         else:
@@ -2276,6 +2323,57 @@ def settings_tab(data: dict[str, Any]) -> None:
             st.error("Das Backup konnte nicht gelesen werden.")
 
 
+def projector_runtime_css(data: dict[str, Any]) -> None:
+    zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
+    background = str(data["settings"].get("projector_background", "") or "")
+    if background:
+        surface_background = (
+            f'linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16)), '
+            f'url("{background}")'
+        )
+    else:
+        surface_background = "linear-gradient(#e9e8e5, #e9e8e5)"
+    st.markdown(
+        f"""
+        <style>
+        :root {{
+            --projector-zoom: {zoom:.2f};
+            --projector-surface-background: {surface_background};
+        }}
+
+        .stApp {{
+            background: #eef3f8 !important;
+        }}
+
+        .projector-groups-fit,
+        .projector-qualification,
+        .bracket-stage {{
+            background: var(--projector-surface-background) center center / cover no-repeat !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+            padding: 8px !important;
+            zoom: 1 !important;
+        }}
+
+        .projector-zoom-content {{
+            height: calc(100% / var(--projector-zoom));
+            margin-left: auto;
+            margin-right: auto;
+            transform: scale(var(--projector-zoom));
+            transform-origin: top center;
+            width: calc(100% / var(--projector-zoom));
+        }}
+
+        .bracket-stage .tree-canvas {{
+            transform: scale(var(--projector-zoom)) !important;
+            transform-origin: top center !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_projector_groups(data: dict[str, Any]) -> None:
     cards = []
     for config in GROUP_CONFIG:
@@ -2290,8 +2388,10 @@ def render_projector_groups(data: dict[str, Any]) -> None:
     st.markdown(
         f"""
         <div class="projector-groups-fit">
-            <div class="projector-row projector-row-top">{"".join(cards[:3])}</div>
-            <div class="projector-row projector-row-bottom">{"".join(cards[3:])}</div>
+            <div class="projector-zoom-content projector-groups-content">
+                <div class="projector-row projector-row-top">{"".join(cards[:3])}</div>
+                <div class="projector-row projector-row-bottom">{"".join(cards[3:])}</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2317,20 +2417,22 @@ def render_projector_qualification(data: dict[str, Any]) -> None:
     st.markdown(
         f"""
         <div class="projector-qualification">
-            <section>
-                <h2>Hauptfeld</h2>
-                <table class="ts-table projector-table">
-                    <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
-                    <tbody>{rows(main)}</tbody>
-                </table>
-            </section>
-            <section>
-                <h2>Nebenfeld</h2>
-                <table class="ts-table projector-table">
-                    <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
-                    <tbody>{rows(side)}</tbody>
-                </table>
-            </section>
+            <div class="projector-zoom-content projector-qualification-content">
+                <section>
+                    <h2>Hauptfeld</h2>
+                    <table class="ts-table projector-table">
+                        <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
+                        <tbody>{rows(main)}</tbody>
+                    </table>
+                </section>
+                <section>
+                    <h2>Nebenfeld</h2>
+                    <table class="ts-table projector-table">
+                        <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
+                        <tbody>{rows(side)}</tbody>
+                    </table>
+                </section>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2338,6 +2440,8 @@ def render_projector_qualification(data: dict[str, Any]) -> None:
 
 
 def projector_view(data: dict[str, Any]) -> None:
+    if st.query_params.get("view") == "beamer":
+        projector_runtime_css(data)
     view_setting = data["settings"].get("projector_view", "Automatisch")
     active_bracket = ""
     display_label = "Gruppenphase"
@@ -2387,7 +2491,6 @@ def sidebar(data: dict[str, Any]) -> tuple[str, str]:
             "Qualifikation",
             "K.O.-Felder",
             "Laufende Spiele",
-            "Beamer",
             "Einstellungen",
         ],
         label_visibility="collapsed",
@@ -2438,59 +2541,78 @@ def main() -> None:
     css()
     data = init_state()
     if st.query_params.get("view") == "beamer":
+        projector_zoom = max(0.60, min(1.20, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
+        projector_background = str(data["settings"].get("projector_background", "") or "")
+        if projector_background:
+            projector_background_css = (
+                f'linear-gradient(rgba(244, 247, 251, 0.86), rgba(232, 238, 246, 0.86)), '
+                f'url("{projector_background}")'
+            )
+        else:
+            projector_background_css = "linear-gradient(180deg, #f3f5f8 0%, #dde4ec 100%)"
         st.markdown(
-            """
+            f"""
             <style>
-            section[data-testid="stSidebar"], header[data-testid="stHeader"], div[data-testid="stToolbar"] {
+            :root {{
+                --projector-zoom: {projector_zoom:.2f};
+            }}
+            section[data-testid="stSidebar"], header[data-testid="stHeader"], div[data-testid="stToolbar"] {{
                 display: none !important;
-            }
-            .block-container {
+            }}
+            .block-container {{
                 max-width: 100% !important;
                 padding: 0 !important;
-            }
-            html, body, .stApp {
+            }}
+            html, body, .stApp {{
                 overflow: hidden !important;
-            }
-            .projector-shell {
+            }}
+            .stApp {{
+                background-image: {projector_background_css} !important;
+                background-position: center center !important;
+                background-size: cover !important;
+            }}
+            .projector-shell {{
                 height: 100vh !important;
                 min-height: 100vh !important;
                 overflow: hidden !important;
                 padding: 0 !important;
-            }
-            .projector-title {
+            }}
+            .projector-title {{
                 display: none !important;
-            }
-            .projector-groups-fit {
-                height: 100vh !important;
+            }}
+            .projector-groups-fit {{
+                height: calc(100vh / var(--projector-zoom)) !important;
                 padding: 8px !important;
-            }
-            .projector-row {
+                zoom: var(--projector-zoom);
+            }}
+            .projector-row {{
                 gap: 14px !important;
-            }
-            .projector-row-top {
+            }}
+            .projector-row-top {{
                 grid-template-columns: repeat(3, minmax(280px, 1fr)) !important;
                 width: min(96vw, 1420px) !important;
                 margin-inline: auto !important;
-            }
-            .projector-row-bottom {
+            }}
+            .projector-row-bottom {{
                 grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
                 width: min(64vw, 920px) !important;
                 margin-inline: auto !important;
-            }
-            .projector-qualification {
-                height: 100vh !important;
+            }}
+            .projector-qualification {{
+                height: calc(100vh / var(--projector-zoom)) !important;
                 padding: 12px !important;
-            }
-            .bracket-stage {
+                zoom: var(--projector-zoom);
+            }}
+            .bracket-stage {{
                 border: 0 !important;
-                height: 100vh !important;
+                height: calc(100vh / var(--projector-zoom)) !important;
                 overflow: hidden !important;
                 padding: 8px !important;
-            }
-            .tree-canvas {
-                transform: scale(0.88);
-                transform-origin: top left;
-            }
+                zoom: var(--projector-zoom);
+            }}
+            .tree-canvas {{
+                transform: none !important;
+            }}
             </style>
             """,
             unsafe_allow_html=True,
@@ -2522,8 +2644,6 @@ def main() -> None:
         side_bracket_tab(data)
     elif page == "Laufende Spiele":
         live_games_tab(data)
-    elif page == "Beamer":
-        live_projector_panel()
     elif page == "Einstellungen":
         settings_tab(data)
 
