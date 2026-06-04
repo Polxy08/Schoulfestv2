@@ -2384,7 +2384,7 @@ def projector_offset_for_view(data: dict[str, Any], view_name: str) -> tuple[int
 
 def projector_runtime_css(data: dict[str, Any], view_name: str) -> None:
     zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
-     offset_x, offset_y = projector_offset_for_view(data, view_name)
+        offset_x, offset_y = projector_offset_for_view(data, view_name)
     background = str(data["settings"].get("projector_background", "") or "")
     if background:
         surface_background = (
