@@ -177,7 +177,7 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
         current = offsets.get(view, {})
         if not isinstance(current, dict):
             current = {}
-            if not loaded_has_view_offsets:
+        if not loaded_has_view_offsets:
             current = {}
         fallback_x = legacy_x if not loaded_has_view_offsets else 0
         fallback_y = legacy_y if not loaded_has_view_offsets else 0
