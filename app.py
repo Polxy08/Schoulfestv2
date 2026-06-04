@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 APP_DIR = Path(__file__).parent
 DATA_FILE = APP_DIR / "tournament_data.json"
-BRACKET_PDF_FILE = APP_DIR / "schulfestturnier_felder.pdf"
+BRACKET_PDF_FILE = APP_DIR / "Schoulfest_felder.pdf"
 
 GROUP_CONFIG = [
     {"id": "A", "name": "Grupp A", "size": 4, "qualifiers": 2},
@@ -28,18 +28,18 @@ GROUP_CONFIG = [
 ]
 
 MAIN_QF = [
-    ("HQF1", "Viertelfinale 1", 0, 1),
-    ("HQF2", "Viertelfinale 2", 2, 3),
-    ("HQF3", "Viertelfinale 3", 4, 5),
-    ("HQF4", "Viertelfinale 4", 6, 7),
+    ("HQF1", "Quarterfinal 1", 0, 1),
+    ("HQF2", "Quarterfinal 2", 2, 3),
+    ("HQF3", "Quarterfinal 3", 4, 5),
+    ("HQF4", "Quarterfinal 4", 6, 7),
 ]
 
 SIDE_R1 = [
-    ("N1", "Spiel 1", 0, 1),
-    ("N2", "Spiel 2", 2, 3),
-    ("N3", "Spiel 3", 4, 5),
-    ("N4", "Spiel 4", 6, 7),
-    ("N5", "Spiel 5", 8, 9),
+    ("N1", "Game 1", 0, 1),
+    ("N2", "Game 2", 2, 3),
+    ("N3", "Game 3", 4, 5),
+    ("N4", "Game 4", 6, 7),
+    ("N5", "Game 5", 8, 9),
 ]
 
 STATUS_OPTIONS = ["offen", "angesetzt", "laeuft", "fertig", "verschoben"]
@@ -1037,7 +1037,7 @@ def parse_score(raw: str, key_label: str) -> int | None:
     try:
         score = int(value)
     except ValueError:
-        st.warning(f"{key_label}: Bitte eine ganze Zahl eintragen.")
+        st.warning(f"{key_label}: Bitte eine ganze Zahl androen.")
         return None
     if score < 0:
         st.warning(f"{key_label}: Negative Resultate werden ignoriert.")
@@ -1254,7 +1254,7 @@ def standings_table_parts(data: dict[str, Any], group_id: str, compact: bool = F
             classes.append("qualified-row")
         else:
             classes.append("")
-    headers = ["#", "Klass", "Sp", "Pkt"] if compact else ["#", "Klass", "Sp", "S", "U", "N", "P", "Bonus", "Gesamt"]
+    headers = ["#", "Klass", "Sp", "Pkt"] if compact else ["#", "Klass", "Sp", "S", "U", "N", "P", "Bonus", "Total"]
     return headers, rows, classes
 
 
@@ -1338,17 +1338,17 @@ def render_ko_match_editor(
         if current not in options:
             current = ""
         record["winner"] = cols[3].selectbox(
-            "Sieger",
+            "Gewënner",
             options,
             index=options.index(current),
             key=f"{bracket}_{match_id}_winner",
             label_visibility="collapsed",
             format_func=lambda value: "offen" if value == "" else team_name(data, value),
         )
-        with st.expander("Uhrzeit / Ort fuer Beamer", expanded=False):
+        with st.expander("Zeit / Platz", expanded=False):
             with st.form(f"{bracket}_{match_id}_info_form", clear_on_submit=False):
                 info_cols = st.columns([1.2, 1.6, 1.1, 1])
-                staged_time = info_cols[0].text_input("Uhrzeit", value=str(record.get("time", "")), placeholder="10:30")
+                staged_time = info_cols[0].text_input("Zeit", value=str(record.get("time", "")), placeholder="10:30")
                 staged_place = info_cols[1].text_input("Ort", value=str(record.get("place", "")), placeholder="Halle 1")
                 staged_show = info_cols[2].checkbox("Auf Beamer", value=bool(record.get("show_info", False)))
                 submitted = info_cols[3].form_submit_button("Bestaetigen")
@@ -1430,9 +1430,9 @@ def render_main_tree(data: dict[str, Any], projector: bool = False) -> None:
     rounds = build_main_state(data)
     matches = {match["id"]: match for _, round_matches in rounds for match in round_matches}
     labels = [
-        ("Viertelfinale", 24, 28),
-        ("Halbfinale", 390, 88),
-        ("Finale", 760, 208),
+        ("Quarterfinal", 24, 28),
+        ("Semifinal", 390, 88),
+        ("Final", 760, 208),
     ]
     cards = [
         tree_match_html(data, matches["HQF1"], 24, 70),
@@ -1569,8 +1569,8 @@ def build_main_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
         )
 
     semi_pairs = [
-        ("HHF1", "Halbfinale 1", qf_winners[0], qf_winners[1]),
-        ("HHF2", "Halbfinale 2", qf_winners[2], qf_winners[3]),
+        ("HHF1", "Semifinal 1", qf_winners[0], qf_winners[1]),
+        ("HHF2", "Semifinal 2", qf_winners[2], qf_winners[3]),
     ]
     semis: list[dict[str, Any]] = []
     semi_winners: list[str] = []
@@ -1599,7 +1599,7 @@ def build_main_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     final_record = match_record(data, "main", "HFIN")
     final = {
         "id": "HFIN",
-        "label": "Finale Haapttableau",
+        "label": "Final Haapttableau",
         "team_a": semi_winners[0],
         "team_b": semi_winners[1],
         "score_a": final_record.get("score_a"),
@@ -1610,9 +1610,9 @@ def build_main_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
         "show_info": final_record.get("show_info", False),
     }
     return [
-        ("Viertelfinale", qf_matches),
-        ("Halbfinale", semis),
-        ("Finale", [final]),
+        ("Quarterfinal", qf_matches),
+        ("Semifinal", semis),
+        ("Final", [final]),
     ]
 
 
@@ -1647,8 +1647,8 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
 
     wildcard_winner = r1_winners.get(wildcard_match, "")
     r2_pairs = [
-        ("NQ1", "Spiel 6", r1_winners.get("N2", ""), r1_winners.get("N3", "")),
-        ("NQ2", "Halbfinale", r1_winners.get("N4", ""), r1_winners.get("N5", "")),
+        ("NQ1", "Game 6", r1_winners.get("N2", ""), r1_winners.get("N3", "")),
+        ("NQ2", "Semifinal", r1_winners.get("N4", ""), r1_winners.get("N5", "")),
     ]
     r2_matches: list[dict[str, Any]] = []
     r2_winners: dict[str, str] = {}
@@ -1678,7 +1678,7 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     wildcard_semi_winner = winner_from_record(wildcard_path_team, wildcard_winner, wildcard_record)
     wildcard_semi = {
         "id": "NWHF",
-        "label": "Halbfinale",
+        "label": "Semifinal",
         "team_a": wildcard_path_team,
         "team_b": wildcard_winner,
         "score_a": wildcard_record.get("score_a"),
@@ -1693,7 +1693,7 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     final_record = match_record(data, "side", "NFIN")
     side_final = {
         "id": "NFIN",
-        "label": "Finale Niewentableau",
+        "label": "Final Niewentableau",
         "team_a": direct_finalist,
         "team_b": wildcard_semi_winner,
         "score_a": final_record.get("score_a"),
@@ -1704,10 +1704,10 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
         "show_info": final_record.get("show_info", False),
     }
     return [
-        ("Runde 1", r1_matches),
-        ("Runde 2", r2_matches),
-        ("Halbfinale", [wildcard_semi]),
-        ("Finale", [side_final]),
+        ("Round 1", r1_matches),
+        ("Round 2", r2_matches),
+        ("Semifinal", [wildcard_semi]),
+        ("Final", [side_final]),
     ]
 
 
@@ -1719,29 +1719,28 @@ def setup_tab(data: dict[str, Any]) -> None:
 
     for config in GROUP_CONFIG:
         group = data["groups"][config["id"]]
-        with st.expander(f"{group['name']} - {config['size']} Klassen, {config['qualifiers']} ins Haapttableau", expanded=config["id"] == "A"):
+        with st.expander(f"{group['name']} - {config['size']} Klassen, {config['qualifiers']} an den Haapttableau", expanded=config["id"] == "A"):
             group["name"] = st.text_input("Joergang", value=group["name"], key=f"setup_group_name_{config['id']}", disabled=locked)
             for team in group["teams"]:
                 team["name"] = st.text_input("Klass", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
 
     main, side = qualification_lists(data)
-    st.subheader("Aktuelle Aufteilung")
+    st.subheader("Tëschestand Gruppephase")
     cols = st.columns(2)
     with cols[0]:
         st.markdown("**Haapttableau**")
-        render_table(["Klass", "Grupp", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in main])
+        render_table(["Klass", "Grupp", "Rang", "Punkten"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in main])
     with cols[1]:
         st.markdown("**Niewentableau**")
-        render_table(["Klass", "Grupp", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in side])
+        render_table(["Klass", "Grupp", "Rang", "Punkten"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in side])
 
 
 def groups_tab(data: dict[str, Any]) -> None:
     render_header(data, "Gruppephase: Resultater, Tabellen und Stechen")
-    st.write("Hier trägst du nur ein, wer gewonnen hat. Sieg = 2 Punkte, Unentschieden = 1 Punkt pro Team, Niederlage = 0 Punkte. Bonuspunkte werden addiert.")
 
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.info("Die Gruppephase ist gesperrt, weil die Felder bereits ausgelost wurden.")
+        st.info("Gruppephase gespaart - Draw gemaach")
 
     tabs = st.tabs([data["groups"][config["id"]]["name"] for config in GROUP_CONFIG])
     for tab, config in zip(tabs, GROUP_CONFIG):
@@ -1750,7 +1749,7 @@ def groups_tab(data: dict[str, Any]) -> None:
         with tab:
             st.subheader(group["name"])
             st.caption(f"Qualifikatioun: Dei eischt {group['qualifiers']} kommen an den Hapttableau.")
-            with st.expander("Bonuspunkte", expanded=False):
+            with st.expander("BonusPunkten", expanded=False):
                 bonus_cols = st.columns(len(group["teams"]))
                 for bonus_col, team in zip(bonus_cols, group["teams"]):
                     team["bonus"] = bonus_col.number_input(
@@ -1785,7 +1784,7 @@ def groups_tab(data: dict[str, Any]) -> None:
                     ),
                 )
 
-            st.markdown("**Tabelle**")
+            st.markdown("**Tabell**")
             status = tiebreak_status(data, group_id)
             if status["tie_ids"]:
                 with st.container(border=True):
@@ -1800,7 +1799,7 @@ def groups_tab(data: dict[str, Any]) -> None:
                         if current not in choices:
                             current = ""
                         selected_one = st.selectbox(
-                            "Sieger des Stechens",
+                            "Gewënner des Stechens",
                             choices,
                             index=choices.index(current),
                             key=f"tiebreak_one_{group_id}",
@@ -1829,16 +1828,14 @@ def groups_tab(data: dict[str, Any]) -> None:
 
 
 def main_bracket_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Haapttableau: 8er-KO-Baum")
+    render_header(data, "Haapttableau: 8er-KO-Baam")
     if not data["settings"].get("draw_done", False):
-        st.warning("Das Haapttableau wird erst nach der gesperrten Gruppephase ausgelost. Gehe zu Qualifikatioun und gib den Code ein.")
         return
     main, _ = qualification_lists(data)
-    st.caption(f"Aktuell im Haapttableau: {len(main)} von 8 Slots. Du kannst jeden Slot manuell ueberschreiben.")
 
     auto_slots = main_auto_slots(data)
     options = [item["id"] for item in main] or all_team_ids(data)
-    with st.expander("Setzung bearbeiten", expanded=False):
+    with st.expander("Positioun bearbechten", expanded=False):
         for row_start in range(0, 8, 4):
             cols = st.columns(4)
             for offset, col in enumerate(cols):
@@ -1853,7 +1850,7 @@ def main_bracket_tab(data: dict[str, Any]) -> None:
                         auto_team=auto_slots[index] if index < len(auto_slots) else "",
                     )
 
-    with st.expander("Sieger eintragen", expanded=False):
+    with st.expander("Gewënner androen", expanded=False):
         state = build_main_state(data)
         qf_lookup = {match["id"]: match for _, matches in state for match in matches}
         for match_id, label, _, _ in MAIN_QF:
@@ -1868,21 +1865,20 @@ def main_bracket_tab(data: dict[str, Any]) -> None:
         for match in state[2][1]:
             render_ko_match_editor(data, "main", match["id"], match["label"], match["team_a"], match["team_b"])
 
-    st.subheader("Baum")
+    st.subheader("Baam")
     render_main_tree(data)
 
 
 def side_bracket_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Niewentableau: 10er-Baum")
+    render_header(data, "Niewentableau: 10er-Baam")
     if not data["settings"].get("draw_done", False):
-        st.warning("Das Niewentableau wird erst nach der gesperrten Gruppephase ausgelost. Gehe zu Qualifikatioun und gib den Code ein.")
         return
     _, side = qualification_lists(data)
-    st.caption("Die 10 Niewentableau-Teams starten links und spielen sich bis zum Finale rechts durch.")
+    st.caption("Die 10 Niewentableau-Teams starten links und spielen sich bis zum Final rechts durch.")
 
     auto_slots = side_auto_slots(data)
     options = [item["id"] for item in side] or all_team_ids(data)
-    with st.expander("Setzung bearbeiten", expanded=False):
+    with st.expander("Positioun bearbechten", expanded=False):
         for row_start in range(0, 10, 2):
             cols = st.columns(2)
             for offset, col in enumerate(cols):
@@ -1897,7 +1893,7 @@ def side_bracket_tab(data: dict[str, Any]) -> None:
                         auto_team=auto_slots[index] if index < len(auto_slots) else "",
                     )
 
-    with st.expander("Sieger eintragen", expanded=False):
+    with st.expander("Gewënner androen", expanded=False):
         state = build_side_state(data)
         for match in state[0][1]:
             render_ko_match_editor(data, "side", match["id"], match["label"], match["team_a"], match["team_b"])
@@ -1910,7 +1906,6 @@ def side_bracket_tab(data: dict[str, Any]) -> None:
         for match in state[2][1] + state[3][1]:
             render_ko_match_editor(data, "side", match["id"], match["label"], match["team_a"], match["team_b"])
 
-    st.subheader("Baum")
     render_side_tree(data)
 
 
@@ -1966,8 +1961,8 @@ def schedule_dataframe(data: dict[str, Any]) -> pd.DataFrame:
             {
                 "ID": match["id"],
                 "Phase": match["phase"],
-                "Runde": match["round"],
-                "Spiel": match["label"],
+                "Round": match["round"],
+                "Game": match["label"],
                 "Team A": team_name(data, match["team_a"]),
                 "Team B": team_name(data, match["team_b"]),
                 "Zeit": schedule.get("time", ""),
@@ -1981,14 +1976,14 @@ def schedule_dataframe(data: dict[str, Any]) -> pd.DataFrame:
 
 def schedule_tab(data: dict[str, Any]) -> None:
     render_header(data, "Spielplan: Zeiten, Orte und Zusatzspiele")
-    st.write("Hier kannst du eintragen, wo und wann welche Klass sein soll. Zusatzspiele fuer Platzierungen oder Klassenraeume kannst du unten frei ergaenzen.")
+    st.write("Hier kannst du androen, wo und wann welche Klass sein soll. Zusatzspiele fuer Platzierungen oder Klassenraeume kannst du unten frei ergaenzen.")
 
     schedule_df = schedule_dataframe(data)
     edited = st.data_editor(
         schedule_df,
         use_container_width=True,
         hide_index=True,
-        disabled=["ID", "Phase", "Runde", "Spiel", "Team A", "Team B"],
+        disabled=["ID", "Phase", "Round", "Game", "Team A", "Team B"],
         column_config={
             "Status": st.column_config.SelectboxColumn("Status", options=STATUS_OPTIONS),
             "Zeit": st.column_config.TextColumn("Zeit", help="Zum Beispiel 10:30"),
@@ -2005,7 +2000,7 @@ def schedule_tab(data: dict[str, Any]) -> None:
         }
 
     st.subheader("Freie Zusatzzeilen")
-    custom_columns = ["Spiel", "Team A", "Team B", "Zeit", "Ort", "Status", "Notiz"]
+    custom_columns = ["Game", "Team A", "Team B", "Zeit", "Ort", "Status", "Notiz"]
     custom_df = pd.DataFrame(data.get("custom_schedule", []), columns=custom_columns)
     custom_edited = st.data_editor(
         custom_df,
@@ -2028,7 +2023,7 @@ def schedule_tab(data: dict[str, Any]) -> None:
         custom_export = pd.DataFrame(data["custom_schedule"])
         custom_export.insert(0, "ID", "frei")
         custom_export.insert(1, "Phase", "Zusatz")
-        custom_export.insert(2, "Runde", "")
+        custom_export.insert(2, "Round", "")
         export_df = pd.concat([export_df, custom_export], ignore_index=True, sort=False)
     st.download_button(
         "Spielplan als CSV herunterladen",
@@ -2060,9 +2055,9 @@ def standings_dataframe(data: dict[str, Any]) -> pd.DataFrame:
                     "Siege": row["wins"],
                     "Unentschieden": row["draws"],
                     "Niederlagen": row["losses"],
-                    "Punkte": row["match_points"],
+                    "Punkten": row["match_points"],
                     "Bonus": row["bonus"],
-                    "Gesamt": row["total"],
+                    "Total": row["total"],
                     "Qualifikatioun": "Haapttableau" if rank <= group["qualifiers"] else "Niewentableau",
                 }
             )
@@ -2216,11 +2211,11 @@ def future_planning_placeholder(data: dict[str, Any]) -> None:
 
 
 def qualification_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Qualifikatioun: Gruppephase sperren und Felder auslosen")
+    render_header
     ready, problems = group_phase_ready(data)
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.success(f"Gruppephase gesperrt. Felder ausgelost: {data['settings'].get('drawn_at', '-')}")
+        st.success(f"Draw gemaach: {data['settings'].get('drawn_at', '-')}")
     elif problems:
         st.warning("Vor der Auslosung muss die Gruppephase komplett sein.")
         for problem in problems:
@@ -2231,10 +2226,10 @@ def qualification_tab(data: dict[str, Any]) -> None:
     main, side = qualification_lists(data)
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**Haapttableau-Kandidaten**")
+        st.markdown("**Haapttableau-Klassen**")
         render_table(["Klass", "Grupp", "Rang"], [[item["name"], item["group"], item["rank"]] for item in main])
     with cols[1]:
-        st.markdown("**Niewentableau-Kandidaten**")
+        st.markdown("**Niewentableau-Klassen**")
         render_table(["Klass", "Grupp", "Rang"], [[item["name"], item["group"], item["rank"]] for item in side])
 
     if not locked:
@@ -2250,12 +2245,12 @@ def qualification_tab(data: dict[str, Any]) -> None:
         if not BRACKET_PDF_FILE.exists():
             write_bracket_pdf(data)
         st.download_button(
-            "PDF der Felder herunterladen",
+            "PDF vun den Tableauen eroflueden",
             data=BRACKET_PDF_FILE.read_bytes(),
-            file_name="schulfestturnier_felder.pdf",
+            file_name="Schoulfest_felder.pdf",
             mime="application/pdf",
         )
-        if st.button("PDF neu erstellen"):
+        if st.button("PDF nei lueden"):
             write_bracket_pdf(data)
             save_data(data)
             st.success("PDF wurde neu erstellt.")
@@ -2274,10 +2269,9 @@ def active_matches(data: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 
 
 def live_games_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Laufende Spiele: Sieger eintragen")
+    render_header(data, "Laufende Spiele: Gewënner androen")
     matches = active_matches(data)
     if not matches:
-        st.info("Aktuell gibt es keine offenen KO-Spiele mit zwei feststehenden Teams.")
         return
     for field_name, match in matches:
         render_ko_match_editor(data, "main" if field_name == "Haapttableau" else "side", match["id"], f"{field_name} - {match['label']}", match["team_a"], match["team_b"])
@@ -2307,7 +2301,7 @@ def settings_tab(data: dict[str, Any]) -> None:
         else:
             data["settings"]["projector_view"] = selected_projector
     if data["settings"].get("projector_view") == "Automatisch":
-        if st.button("Automatik ab aktuellem Bild neu starten"):
+        if st.button("Automatik ab aktueller View nei starten"):
             restart_projector_auto(data, current_projector_screen(data))
             st.success("Beamer-Automatik neu gestartet.")
 
@@ -2583,13 +2577,13 @@ def sidebar(data: dict[str, Any]) -> tuple[str, str]:
     if page == "K.O.-Felder":
         field = st.sidebar.radio("Feld", ["Haapttableau", "Niewentableau"], label_visibility="collapsed")
     st.sidebar.markdown(
-        '<a class="beamer-link" href="?view=beamer" target="_blank">Beamer-Modus öffnen</a>',
+        '<a class="beamer-link" href="?view=beamer" target="_blank">Beamer-Modus</a>',
         unsafe_allow_html=True,
     )
     st.sidebar.caption(
         "Status: "
         + ("KO-Phase" if data["settings"].get("draw_done") else "Gruppephase")
-        + (" · gesperrt" if data["settings"].get("group_locked") else "")
+        + (" · gespaart" if data["settings"].get("group_locked") else "")
     )
     return page, field
 
@@ -2607,8 +2601,8 @@ def dashboard_metrics(data: dict[str, Any]) -> None:
             <div class="metric-box"><b>{played}/{total}</b><span>Gruppenspiele eingetragen</span></div>
             <div class="metric-box"><b>{len(main)}</b><span>Haapttableau-Slots</span></div>
             <div class="metric-box"><b>{len(side)}</b><span>Niewentableau-Slots</span></div>
-            <div class="metric-box"><b>{escape(team_name(data, main_winner))}</b><span>Sieger Haapttableau</span></div>
-            <div class="metric-box"><b>{escape(team_name(data, side_winner))}</b><span>Sieger Niewentableau</span></div>
+            <div class="metric-box"><b>{escape(team_name(data, main_winner))}</b><span>Gewënner Haapttableau</span></div>
+            <div class="metric-box"><b>{escape(team_name(data, side_winner))}</b><span>Gewënner Niewentableau</span></div>
         </div>
         """,
         unsafe_allow_html=True,
