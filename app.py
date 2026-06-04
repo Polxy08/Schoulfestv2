@@ -1429,6 +1429,9 @@ def tree_match_html(
 def render_main_tree(data: dict[str, Any], projector: bool = False) -> None:
     rounds = build_main_state(data)
     matches = {match["id"]: match for _, round_matches in rounds for match in round_matches}
+    labels = [
+        ("Haapttableau", 24, 24),
+    ]
     cards = [
         tree_match_html(data, matches["HQF1"], 24, 70),
         tree_match_html(data, matches["HQF2"], 24, 190),
@@ -1468,6 +1471,9 @@ def render_main_tree(data: dict[str, Any], projector: bool = False) -> None:
 def render_side_tree(data: dict[str, Any], projector: bool = False) -> None:
     rounds = build_side_state(data)
     matches = {match["id"]: match for _, round_matches in rounds for match in round_matches}
+    labels = [
+        ("Niewentableau", 24, 24),
+    ]
     cards = [
         tree_match_html(data, matches["N1"], 20, 70, compact=True),
         tree_match_html(data, matches["N2"], 20, 165, compact=True),
