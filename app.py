@@ -573,7 +573,7 @@ def css() -> None:
         }
 
         .projector-group-card h2 {
-            background: #343943;
+            background: #ffffff;
             color: #ffffff;
             font-size: clamp(0.85rem, 1.15vw, 1.15rem);
             margin: 0;
