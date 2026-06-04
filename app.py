@@ -88,6 +88,8 @@ def default_data() -> dict[str, Any]:
             "projector_auto_started_at": 0.0,
             "projector_auto_start_view": "Gruppenphase",
             "projector_zoom": 1.0,
+            "projector_offset_x": 0,
+            "projector_offset_y": 0,
             "projector_background": "",
             "group_locked": False,
             "draw_done": False,
@@ -160,6 +162,8 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized["settings"].setdefault("projector_auto_started_at", 0.0)
     normalized["settings"].setdefault("projector_auto_start_view", "Gruppenphase")
     normalized["settings"].setdefault("projector_zoom", 1.0)
+    normalized["settings"].setdefault("projector_offset_x", 0)
+    normalized["settings"].setdefault("projector_offset_y", 0)
     normalized["settings"].setdefault("projector_background", "")
     normalized["settings"].setdefault("bracket_pdf_path", "")
     normalized.setdefault("schedule", {})
@@ -191,7 +195,7 @@ def reset_tournament_state(current: dict[str, Any] | None = None) -> dict[str, A
             for team in fresh["groups"][group_id]["teams"]:
                 if old_names.get(team["id"]):
                     team["name"] = old_names[team["id"]]
-        for key in ["event_title", "projector_zoom", "projector_background"]:
+        for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_background"]:
             if key in current.get("settings", {}):
                 fresh["settings"][key] = current["settings"][key]
     save_data(fresh)
@@ -2283,6 +2287,17 @@ def settings_tab(data: dict[str, Any]) -> None:
         value=max(0.50, min(5.00, zoom_value)),
         step=0.05,
     )
+    offset_cols = st.columns(2)
+    data["settings"]["projector_offset_x"] = offset_cols[0].number_input(
+        "Beamer-Position X (px)",
+        value=int(float(data["settings"].get("projector_offset_x", 0) or 0)),
+        step=10,
+    )
+    data["settings"]["projector_offset_y"] = offset_cols[1].number_input(
+        "Beamer-Position Y (px)",
+        value=int(float(data["settings"].get("projector_offset_y", 0) or 0)),
+        step=10,
+    )
     background_upload = st.file_uploader("Beamer-Hintergrundbild", type=["png", "jpg", "jpeg", "webp"])
     if background_upload is not None:
         mime = background_upload.type or "image/png"
@@ -2325,6 +2340,8 @@ def settings_tab(data: dict[str, Any]) -> None:
 
 def projector_runtime_css(data: dict[str, Any]) -> None:
     zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
+    offset_x = int(float(data["settings"].get("projector_offset_x", 0) or 0))
+    offset_y = int(float(data["settings"].get("projector_offset_y", 0) or 0))
     background = str(data["settings"].get("projector_background", "") or "")
     if background:
         surface_background = (
@@ -2338,6 +2355,8 @@ def projector_runtime_css(data: dict[str, Any]) -> None:
         <style>
         :root {{
             --projector-zoom: {zoom:.2f};
+            --projector-offset-x: {offset_x}px;
+            --projector-offset-y: {offset_y}px;
             --projector-surface-background: {surface_background};
         }}
 
@@ -2359,13 +2378,13 @@ def projector_runtime_css(data: dict[str, Any]) -> None:
             height: calc(100% / var(--projector-zoom));
             margin-left: auto;
             margin-right: auto;
-            transform: scale(var(--projector-zoom));
+            transform: translate(var(--projector-offset-x), var(--projector-offset-y)) scale(var(--projector-zoom));
             transform-origin: top center;
             width: calc(100% / var(--projector-zoom));
         }}
 
         .bracket-stage .tree-canvas {{
-            transform: scale(var(--projector-zoom)) !important;
+            transform: translate(var(--projector-offset-x), var(--projector-offset-y)) scale(var(--projector-zoom)) !important;
             transform-origin: top center !important;
         }}
         </style>
