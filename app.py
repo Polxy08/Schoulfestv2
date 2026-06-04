@@ -1495,12 +1495,17 @@ def render_side_tree(data: dict[str, Any], projector: bool = False) -> None:
         <path d="M800 438 H835 V288 H875" />
         <path d="M800 178 H835 V288 H875" />
     """
+    label_html = "".join(
+        f'<div class="tree-round-label" style="left:{left}px; top:{top}px;">{escape(label)}</div>'
+        for label, left, top in labels
+    )
     height_style = "height:560px;" if projector else ""
     st.markdown(
         f"""
         <div class="bracket-stage">
             <div class="tree-canvas side-tree" style="{height_style}">
                 <svg class="tree-lines" viewBox="0 0 1080 560" preserveAspectRatio="none">{lines}</svg>
+                {label_html}
                 {"".join(cards)}
             </div>
         </div>
