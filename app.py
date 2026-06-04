@@ -2439,12 +2439,12 @@ def projector_runtime_css(data: dict[str, Any], view_name: str) -> None:
         }}
 
         .projector-zoom-content {{
-            height: calc(100% / var(--projector-zoom));
+            height: auto;
             margin-left: auto;
             margin-right: auto;
             transform: translate(var(--projector-offset-x), var(--projector-offset-y)) scale(var(--projector-zoom));
             transform-origin: top center;
-            width: calc(100% / var(--projector-zoom));
+            width: 80%;
         }}
 
         .bracket-stage .tree-canvas {{
