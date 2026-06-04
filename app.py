@@ -1168,7 +1168,7 @@ def group_phase_ready(data: dict[str, Any]) -> tuple[bool, list[str]]:
     for config in GROUP_CONFIG:
         group = data["groups"][config["id"]]
         if not group_complete(group):
-            problems.append(f"{group['name']}: noch nicht alle Spiele eingetragen")
+            problems.append(f"{group['name']}: Nach net all Matcher agedroen")
         status = tiebreak_status(data, config["id"])
         if status["needed"]:
             problems.append(f"{group['name']}: Stechen noch nicht korrekt ausgewaehlt")
@@ -1712,15 +1712,15 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
 
 
 def setup_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Setup: Klassn und Gruppn")
-    st.write("Hier kannst du die Klassn- und Joergangn eintragen. Bonuspunkte bleiben in der Gruppephase, damit alles uebersichtlich bleibt.")
+    render_header(data, "Setup: Klassen und Gruppen")
+    st.write("Hier kannst du die Klassen- und Joergangn eintragen. Bonuspunkte bleiben in der Gruppephase, damit alles uebersichtlich bleibt.")
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
         st.info("Gespart - Draw schon gemaach")
 
     for config in GROUP_CONFIG:
         group = data["groups"][config["id"]]
-        with st.expander(f"{group['name']} - {config['size']} Klassn, {config['qualifiers']} ins Haapttableau", expanded=config["id"] == "A"):
+        with st.expander(f"{group['name']} - {config['size']} Klassen, {config['qualifiers']} ins Haapttableau", expanded=config["id"] == "A"):
             group["name"] = st.text_input("Joergang", value=group["name"], key=f"setup_group_name_{config['id']}", disabled=locked)
             for team in group["teams"]:
                 team["name"] = st.text_input("Klass", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
@@ -1982,7 +1982,7 @@ def schedule_dataframe(data: dict[str, Any]) -> pd.DataFrame:
 
 def schedule_tab(data: dict[str, Any]) -> None:
     render_header(data, "Spielplan: Zeiten, Orte und Zusatzspiele")
-    st.write("Hier kannst du eintragen, wo und wann welche Klass sein soll. Zusatzspiele fuer Platzierungen oder Klassnraeume kannst du unten frei ergaenzen.")
+    st.write("Hier kannst du eintragen, wo und wann welche Klass sein soll. Zusatzspiele fuer Platzierungen oder Klassenraeume kannst du unten frei ergaenzen.")
 
     schedule_df = schedule_dataframe(data)
     edited = st.data_editor(
@@ -2605,7 +2605,7 @@ def dashboard_metrics(data: dict[str, Any]) -> None:
     st.markdown(
         f"""
         <div class="metric-strip">
-            <div class="metric-box"><b>{played}/{total}</b><span>Gruppnspiele eingetragen</span></div>
+            <div class="metric-box"><b>{played}/{total}</b><span>Gruppenspiele eingetragen</span></div>
             <div class="metric-box"><b>{len(main)}</b><span>Haapttableau-Slots</span></div>
             <div class="metric-box"><b>{len(side)}</b><span>Niewentableau-Slots</span></div>
             <div class="metric-box"><b>{escape(team_name(data, main_winner))}</b><span>Sieger Haapttableau</span></div>
