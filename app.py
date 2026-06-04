@@ -20,11 +20,11 @@ DATA_FILE = APP_DIR / "tournament_data.json"
 BRACKET_PDF_FILE = APP_DIR / "schulfestturnier_felder.pdf"
 
 GROUP_CONFIG = [
-    {"id": "A", "name": "Gruppe A", "size": 4, "qualifiers": 2},
-    {"id": "B", "name": "Gruppe B", "size": 4, "qualifiers": 2},
-    {"id": "C", "name": "Gruppe C", "size": 4, "qualifiers": 2},
-    {"id": "D", "name": "Gruppe D", "size": 3, "qualifiers": 1},
-    {"id": "E", "name": "Gruppe E", "size": 3, "qualifiers": 1},
+    {"id": "A", "name": "Grupp A", "size": 4, "qualifiers": 2},
+    {"id": "B", "name": "Grupp B", "size": 4, "qualifiers": 2},
+    {"id": "C", "name": "Grupp C", "size": 4, "qualifiers": 2},
+    {"id": "D", "name": "Grupp D", "size": 3, "qualifiers": 1},
+    {"id": "E", "name": "Grupp E", "size": 3, "qualifiers": 1},
 ]
 
 MAIN_QF = [
@@ -43,7 +43,7 @@ SIDE_R1 = [
 ]
 
 STATUS_OPTIONS = ["offen", "angesetzt", "laeuft", "fertig", "verschoben"]
-PROJECTOR_OFFSET_VIEWS = ["Gruppenphase", "Qualifikation", "Hauptfeld", "Nebenfeld"]
+PROJECTOR_OFFSET_VIEWS = ["Gruppephase", "Qualifikatioun", "Haapttableau", "Niewentableau"]
 
 
 def generate_group_matches(group_id: str, team_ids: list[str]) -> list[dict[str, Any]]:
@@ -74,7 +74,7 @@ def default_data() -> dict[str, Any]:
             "name": config["name"],
             "qualifiers": config["qualifiers"],
             "teams": [
-                {"id": team_id, "name": f"Klasse {team_id}", "bonus": 0}
+                {"id": team_id, "name": f"Klass {team_id}", "bonus": 0}
                 for team_id in team_ids
             ],
             "matches": generate_group_matches(group_id, team_ids),
@@ -83,11 +83,11 @@ def default_data() -> dict[str, Any]:
 
     return {
         "settings": {
-            "event_title": "Schulfestturnier",
-            "phase": "Gruppenphase",
+            "event_title": "Schoulfest",
+            "phase": "Gruppephase",
             "projector_view": "Automatisch",
             "projector_auto_started_at": 0.0,
-            "projector_auto_start_view": "Gruppenphase",
+            "projector_auto_start_view": "Gruppephase",
             "projector_zoom": 1.0,
             "projector_zooms": {view: 1.0 for view in PROJECTOR_OFFSET_VIEWS},
             "projector_offset_x": 0,
@@ -140,7 +140,7 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
         group["teams"] = [
             {
                 "id": team_id,
-                "name": str(existing_teams.get(team_id, {}).get("name", f"Klasse {team_id}")),
+                "name": str(existing_teams.get(team_id, {}).get("name", f"Klass {team_id}")),
                 "bonus": int(float(existing_teams.get(team_id, {}).get("bonus", 0.0) or 0.0)),
             }
             for team_id in expected_ids
@@ -166,7 +166,7 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized["main"]["slot_overrides"] = (normalized["main"].get("slot_overrides", []) + [""] * 8)[:8]
     normalized["side"]["slot_overrides"] = (normalized["side"].get("slot_overrides", []) + [""] * 10)[:10]
     normalized["settings"].setdefault("projector_auto_started_at", 0.0)
-    normalized["settings"].setdefault("projector_auto_start_view", "Gruppenphase")
+    normalized["settings"].setdefault("projector_auto_start_view", "Gruppephase")
     normalized["settings"].setdefault("projector_zoom", 1.0)
     legacy_zoom = max(0.50, min(5.00, float(normalized["settings"].get("projector_zoom", 1.0) or 1.0)))
     zooms = normalized["settings"].get("projector_zooms", {})
@@ -1040,7 +1040,7 @@ def parse_score(raw: str, key_label: str) -> int | None:
         st.warning(f"{key_label}: Bitte eine ganze Zahl eintragen.")
         return None
     if score < 0:
-        st.warning(f"{key_label}: Negative Ergebnisse werden ignoriert.")
+        st.warning(f"{key_label}: Negative Resultate werden ignoriert.")
         return None
     return score
 
@@ -1187,7 +1187,7 @@ def draw_fields(data: dict[str, Any]) -> None:
     data["settings"]["draw_done"] = True
     data["settings"]["phase"] = "KO-Phase"
     data["settings"]["drawn_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    restart_projector_auto(data, "Qualifikation")
+    restart_projector_auto(data, "Qualifikatioun")
     write_bracket_pdf(data)
 
 
@@ -1195,7 +1195,7 @@ def render_header(data: dict[str, Any], subtitle: str) -> None:
     st.markdown(
         f"""
         <div class="ts-header">
-            <h1>{escape(data["settings"].get("event_title", "Schulfestturnier"))}</h1>
+            <h1>{escape(data["settings"].get("event_title", "Schoulfest"))}</h1>
             <p>{escape(subtitle)}</p>
         </div>
         """,
@@ -1254,7 +1254,7 @@ def standings_table_parts(data: dict[str, Any], group_id: str, compact: bool = F
             classes.append("qualified-row")
         else:
             classes.append("")
-    headers = ["#", "Klasse", "Sp", "Pkt"] if compact else ["#", "Klasse", "Sp", "S", "U", "N", "P", "Bonus", "Gesamt"]
+    headers = ["#", "Klass", "Sp", "Pkt"] if compact else ["#", "Klass", "Sp", "S", "U", "N", "P", "Bonus", "Gesamt"]
     return headers, rows, classes
 
 
@@ -1599,7 +1599,7 @@ def build_main_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     final_record = match_record(data, "main", "HFIN")
     final = {
         "id": "HFIN",
-        "label": "Finale Hauptfeld",
+        "label": "Finale Haapttableau",
         "team_a": semi_winners[0],
         "team_b": semi_winners[1],
         "score_a": final_record.get("score_a"),
@@ -1693,7 +1693,7 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
     final_record = match_record(data, "side", "NFIN")
     side_final = {
         "id": "NFIN",
-        "label": "Finale Nebenfeld",
+        "label": "Finale Niewentableau",
         "team_a": direct_finalist,
         "team_b": wildcard_semi_winner,
         "score_a": final_record.get("score_a"),
@@ -1712,37 +1712,37 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
 
 
 def setup_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Setup: Klassen und Gruppen")
-    st.write("Hier kannst du die Klassen- und Gruppennamen eintragen. Bonuspunkte bleiben in der Gruppenphase, damit alles uebersichtlich bleibt.")
+    render_header(data, "Setup: Klassn und Gruppn")
+    st.write("Hier kannst du die Klassn- und Joergangn eintragen. Bonuspunkte bleiben in der Gruppephase, damit alles uebersichtlich bleibt.")
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.info("Teams sind gesperrt, weil die Felder bereits ausgelost wurden.")
+        st.info("Gespart - Draw schon gemaach")
 
     for config in GROUP_CONFIG:
         group = data["groups"][config["id"]]
-        with st.expander(f"{group['name']} - {config['size']} Klassen, {config['qualifiers']} ins Hauptfeld", expanded=config["id"] == "A"):
-            group["name"] = st.text_input("Gruppenname", value=group["name"], key=f"setup_group_name_{config['id']}", disabled=locked)
+        with st.expander(f"{group['name']} - {config['size']} Klassn, {config['qualifiers']} ins Haapttableau", expanded=config["id"] == "A"):
+            group["name"] = st.text_input("Joergang", value=group["name"], key=f"setup_group_name_{config['id']}", disabled=locked)
             for team in group["teams"]:
-                team["name"] = st.text_input("Klasse", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
+                team["name"] = st.text_input("Klass", value=team["name"], key=f"setup_team_{team['id']}", disabled=locked)
 
     main, side = qualification_lists(data)
     st.subheader("Aktuelle Aufteilung")
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**Hauptfeld**")
-        render_table(["Klasse", "Gruppe", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in main])
+        st.markdown("**Haapttableaueau**")
+        render_table(["Klass", "Grupp", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in main])
     with cols[1]:
-        st.markdown("**Nebenfeld**")
-        render_table(["Klasse", "Gruppe", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in side])
+        st.markdown("**Niewentableau**")
+        render_table(["Klass", "Grupp", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in side])
 
 
 def groups_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Gruppenphase: Ergebnisse, Tabellen und Stechen")
+    render_header(data, "Gruppephase: Resultater, Tabellen und Stechen")
     st.write("Hier trägst du nur ein, wer gewonnen hat. Sieg = 2 Punkte, Unentschieden = 1 Punkt pro Team, Niederlage = 0 Punkte. Bonuspunkte werden addiert.")
 
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.info("Die Gruppenphase ist gesperrt, weil die Felder bereits ausgelost wurden.")
+        st.info("Die Gruppephase ist gesperrt, weil die Felder bereits ausgelost wurden.")
 
     tabs = st.tabs([data["groups"][config["id"]]["name"] for config in GROUP_CONFIG])
     for tab, config in zip(tabs, GROUP_CONFIG):
@@ -1750,7 +1750,7 @@ def groups_tab(data: dict[str, Any]) -> None:
         group = data["groups"][group_id]
         with tab:
             st.subheader(group["name"])
-            st.caption(f"Qualifikation: Die ersten {group['qualifiers']} kommen ins Hauptfeld.")
+            st.caption(f"Qualifikatioun: Dei eischt {group['qualifiers']} kommen an den Hapttableau.")
             with st.expander("Bonuspunkte", expanded=False):
                 bonus_cols = st.columns(len(group["teams"]))
                 for bonus_col, team in zip(bonus_cols, group["teams"]):
@@ -1830,12 +1830,12 @@ def groups_tab(data: dict[str, Any]) -> None:
 
 
 def main_bracket_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Hauptfeld: 8er-KO-Baum")
+    render_header(data, "Haapttableau: 8er-KO-Baum")
     if not data["settings"].get("draw_done", False):
-        st.warning("Das Hauptfeld wird erst nach der gesperrten Gruppenphase ausgelost. Gehe zu Qualifikation und gib den Code ein.")
+        st.warning("Das Haapttableau wird erst nach der gesperrten Gruppephase ausgelost. Gehe zu Qualifikatioun und gib den Code ein.")
         return
     main, _ = qualification_lists(data)
-    st.caption(f"Aktuell im Hauptfeld: {len(main)} von 8 Slots. Du kannst jeden Slot manuell ueberschreiben.")
+    st.caption(f"Aktuell im Haapttableau: {len(main)} von 8 Slots. Du kannst jeden Slot manuell ueberschreiben.")
 
     auto_slots = main_auto_slots(data)
     options = [item["id"] for item in main] or all_team_ids(data)
@@ -1874,12 +1874,12 @@ def main_bracket_tab(data: dict[str, Any]) -> None:
 
 
 def side_bracket_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Nebenfeld: 10er-Baum")
+    render_header(data, "Niewentableau: 10er-Baum")
     if not data["settings"].get("draw_done", False):
-        st.warning("Das Nebenfeld wird erst nach der gesperrten Gruppenphase ausgelost. Gehe zu Qualifikation und gib den Code ein.")
+        st.warning("Das Niewentableau wird erst nach der gesperrten Gruppephase ausgelost. Gehe zu Qualifikatioun und gib den Code ein.")
         return
     _, side = qualification_lists(data)
-    st.caption("Die 10 Nebenfeld-Teams starten links und spielen sich bis zum Finale rechts durch.")
+    st.caption("Die 10 Niewentableau-Teams starten links und spielen sich bis zum Finale rechts durch.")
 
     auto_slots = side_auto_slots(data)
     options = [item["id"] for item in side] or all_team_ids(data)
@@ -1923,7 +1923,7 @@ def collect_match_catalog(data: dict[str, Any]) -> list[dict[str, Any]]:
             catalog.append(
                 {
                     "id": match["id"],
-                    "phase": "Gruppenphase",
+                    "phase": "Gruppephase",
                     "round": group["name"],
                     "label": f"{group['name']} - {match['id']}",
                     "team_a": match["team_a"],
@@ -1936,7 +1936,7 @@ def collect_match_catalog(data: dict[str, Any]) -> list[dict[str, Any]]:
             catalog.append(
                 {
                     "id": match["id"],
-                    "phase": "Hauptfeld",
+                    "phase": "Haapttableau",
                     "round": round_name,
                     "label": match["label"],
                     "team_a": match["team_a"],
@@ -1949,7 +1949,7 @@ def collect_match_catalog(data: dict[str, Any]) -> list[dict[str, Any]]:
             catalog.append(
                 {
                     "id": match["id"],
-                    "phase": "Nebenfeld",
+                    "phase": "Niewentableau",
                     "round": round_name,
                     "label": match["label"],
                     "team_a": match["team_a"],
@@ -1982,7 +1982,7 @@ def schedule_dataframe(data: dict[str, Any]) -> pd.DataFrame:
 
 def schedule_tab(data: dict[str, Any]) -> None:
     render_header(data, "Spielplan: Zeiten, Orte und Zusatzspiele")
-    st.write("Hier kannst du eintragen, wo und wann welche Klasse sein soll. Zusatzspiele fuer Platzierungen oder Klassenraeume kannst du unten frei ergaenzen.")
+    st.write("Hier kannst du eintragen, wo und wann welche Klass sein soll. Zusatzspiele fuer Platzierungen oder Klassnraeume kannst du unten frei ergaenzen.")
 
     schedule_df = schedule_dataframe(data)
     edited = st.data_editor(
@@ -2054,9 +2054,9 @@ def standings_dataframe(data: dict[str, Any]) -> pd.DataFrame:
         for rank, row in enumerate(standings, start=1):
             rows.append(
                 {
-                    "Gruppe": group["name"],
+                    "Grupp": group["name"],
                     "Rang": rank,
-                    "Klasse": row["team"],
+                    "Klass": row["team"],
                     "Spiele": row["played"],
                     "Siege": row["wins"],
                     "Unentschieden": row["draws"],
@@ -2064,7 +2064,7 @@ def standings_dataframe(data: dict[str, Any]) -> pd.DataFrame:
                     "Punkte": row["match_points"],
                     "Bonus": row["bonus"],
                     "Gesamt": row["total"],
-                    "Qualifikation": "Hauptfeld" if rank <= group["qualifiers"] else "Nebenfeld",
+                    "Qualifikatioun": "Haapttableau" if rank <= group["qualifiers"] else "Niewentableau",
                 }
             )
     return pd.DataFrame(rows)
@@ -2101,7 +2101,7 @@ def bracket_pdf(data: dict[str, Any]) -> bytes:
 
     main_img = Image.new("RGB", (1600, 1000), "#f4f5f7")
     d = ImageDraw.Draw(main_img)
-    d.text((55, 35), "Hauptfeld", fill="#111827", font=font(34, True))
+    d.text((55, 35), "Haapttableau", fill="#111827", font=font(34, True))
     main_matches = {m["id"]: m for _, ms in build_main_state(data) for m in ms}
     main_pos = {
         "HQF1": (60, 120, 380, 220),
@@ -2127,7 +2127,7 @@ def bracket_pdf(data: dict[str, Any]) -> bytes:
 
     side_img = Image.new("RGB", (1600, 1000), "#f4f5f7")
     d = ImageDraw.Draw(side_img)
-    d.text((55, 35), "Nebenfeld", fill="#111827", font=font(34, True))
+    d.text((55, 35), "Niewentableau", fill="#111827", font=font(34, True))
     side_matches = {m["id"]: m for _, ms in build_side_state(data) for m in ms}
     side_pos = {
         "N1": (50, 90, 330, 180),
@@ -2168,36 +2168,36 @@ def write_bracket_pdf(data: dict[str, Any]) -> None:
 def restart_projector_auto(data: dict[str, Any], start_view: str | None = None) -> None:
     now = time.time()
     if not data["settings"].get("draw_done", False):
-        start_view = "Gruppenphase"
-    elif start_view not in {"Gruppenphase", "Qualifikation", "Hauptfeld", "Nebenfeld", "KO-Felder"}:
-        start_view = "Qualifikation"
+        start_view = "Gruppephase"
+    elif start_view not in {"Gruppephase", "Qualifikatioun", "Haapttableau", "Niewentableau", "KO-Felder"}:
+        start_view = "Qualifikatioun"
     if start_view == "KO-Felder":
-        start_view = "Hauptfeld"
+        start_view = "Haapttableau"
     data["settings"]["projector_view"] = "Automatisch"
     data["settings"]["projector_auto_start_view"] = start_view
-    data["settings"]["projector_auto_started_at"] = now - 300 if start_view in {"Hauptfeld", "Nebenfeld"} else now
+    data["settings"]["projector_auto_started_at"] = now - 300 if start_view in {"Haapttableau", "Niewentableau"} else now
 
 
 def auto_projector_display(data: dict[str, Any]) -> tuple[str, str]:
     if not data["settings"].get("draw_done", False):
-        return "Gruppenphase", ""
+        return "Gruppephase", ""
 
     started = float(data["settings"].get("projector_auto_started_at", 0.0) or 0.0)
     if started <= 0:
-        restart_projector_auto(data, "Qualifikation")
+        restart_projector_auto(data, "Qualifikatioun")
         save_data(data)
         started = float(data["settings"].get("projector_auto_started_at", 0.0) or 0.0)
 
     elapsed = max(0, time.time() - started)
-    start_view = data["settings"].get("projector_auto_start_view", "Qualifikation")
+    start_view = data["settings"].get("projector_auto_start_view", "Qualifikatioun")
     if elapsed < 300:
-        first = start_view if start_view in {"Gruppenphase", "Qualifikation"} else "Qualifikation"
-        second = "Gruppenphase" if first == "Qualifikation" else "Qualifikation"
+        first = start_view if start_view in {"Gruppephase", "Qualifikatioun"} else "Qualifikatioun"
+        second = "Gruppephase" if first == "Qualifikatioun" else "Qualifikatioun"
         display_label = first if int(elapsed % 30) < 15 else second
         return display_label, ""
 
-    first_bracket = start_view if start_view in {"Hauptfeld", "Nebenfeld"} else "Hauptfeld"
-    second_bracket = "Nebenfeld" if first_bracket == "Hauptfeld" else "Hauptfeld"
+    first_bracket = start_view if start_view in {"Haapttableau", "Niewentableau"} else "Haapttableau"
+    second_bracket = "Niewentableau" if first_bracket == "Haapttableau" else "Haapttableau"
     active_bracket = first_bracket if int((elapsed - 300) // 15) % 2 == 0 else second_bracket
     return active_bracket, active_bracket
 
@@ -2207,7 +2207,7 @@ def current_projector_screen(data: dict[str, Any]) -> str:
     if view_setting == "Automatisch":
         return auto_projector_display(data)[0]
     if view_setting == "KO-Felder":
-        return "Hauptfeld" if int(time.time() // 15) % 2 == 0 else "Nebenfeld"
+        return "Haapttableau" if int(time.time() // 15) % 2 == 0 else "Niewentableau"
     return view_setting
 
 
@@ -2217,30 +2217,30 @@ def future_planning_placeholder(data: dict[str, Any]) -> None:
 
 
 def qualification_tab(data: dict[str, Any]) -> None:
-    render_header(data, "Qualifikation: Gruppenphase sperren und Felder auslosen")
+    render_header(data, "Qualifikatioun: Gruppephase sperren und Felder auslosen")
     ready, problems = group_phase_ready(data)
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
-        st.success(f"Gruppenphase gesperrt. Felder ausgelost: {data['settings'].get('drawn_at', '-')}")
+        st.success(f"Gruppephase gesperrt. Felder ausgelost: {data['settings'].get('drawn_at', '-')}")
     elif problems:
-        st.warning("Vor der Auslosung muss die Gruppenphase komplett sein.")
+        st.warning("Vor der Auslosung muss die Gruppephase komplett sein.")
         for problem in problems:
             st.write(f"- {problem}")
     else:
-        st.success("Gruppenphase komplett. Code eingeben, um zu sperren und auszulosen.")
+        st.success("Gruppephase komplett. Code eingeben, um zu sperren und auszulosen.")
 
     main, side = qualification_lists(data)
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**Hauptfeld-Kandidaten**")
-        render_table(["Klasse", "Gruppe", "Rang"], [[item["name"], item["group"], item["rank"]] for item in main])
+        st.markdown("**Haapttableau-Kandidaten**")
+        render_table(["Klass", "Grupp", "Rang"], [[item["name"], item["group"], item["rank"]] for item in main])
     with cols[1]:
-        st.markdown("**Nebenfeld-Kandidaten**")
-        render_table(["Klasse", "Gruppe", "Rang"], [[item["name"], item["group"], item["rank"]] for item in side])
+        st.markdown("**Niewentableau-Kandidaten**")
+        render_table(["Klass", "Grupp", "Rang"], [[item["name"], item["group"], item["rank"]] for item in side])
 
     if not locked:
         code = st.text_input("Auslosungs-Code", type="password", placeholder="")
-        if st.button("Gruppenphase sperren und Felder auslosen", disabled=not ready):
+        if st.button("Gruppephase sperren und Felder auslosen", disabled=not ready):
             if code == "0987":
                 draw_fields(data)
                 save_data(data)
@@ -2266,7 +2266,7 @@ def active_matches(data: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     if not data["settings"].get("draw_done", False):
         return []
     matches: list[tuple[str, dict[str, Any]]] = []
-    for field_name, rounds in [("Hauptfeld", build_main_state(data)), ("Nebenfeld", build_side_state(data))]:
+    for field_name, rounds in [("Haapttableau", build_main_state(data)), ("Niewentableau", build_side_state(data))]:
         for _, round_matches in rounds:
             for match in round_matches:
                 if match.get("team_a") and match.get("team_b") and not match.get("winner"):
@@ -2281,24 +2281,24 @@ def live_games_tab(data: dict[str, Any]) -> None:
         st.info("Aktuell gibt es keine offenen KO-Spiele mit zwei feststehenden Teams.")
         return
     for field_name, match in matches:
-        render_ko_match_editor(data, "main" if field_name == "Hauptfeld" else "side", match["id"], f"{field_name} - {match['label']}", match["team_a"], match["team_b"])
+        render_ko_match_editor(data, "main" if field_name == "Haapttableau" else "side", match["id"], f"{field_name} - {match['label']}", match["team_a"], match["team_b"])
 
 
 def settings_tab(data: dict[str, Any]) -> None:
     render_header(data, "Einstellungen")
-    data["settings"]["event_title"] = st.text_input("Titel", value=data["settings"].get("event_title", "Schulfestturnier"))
+    data["settings"]["event_title"] = st.text_input("Titel", value=data["settings"].get("event_title", "Schoulfest"))
     data["settings"]["phase"] = st.selectbox(
         "Aktive Phase",
-        ["Gruppenphase", "KO-Phase"],
-        index=["Gruppenphase", "KO-Phase"].index(data["settings"].get("phase", "Gruppenphase")),
+        ["Gruppephase", "KO-Phase"],
+        index=["Gruppephase", "KO-Phase"].index(data["settings"].get("phase", "Gruppephase")),
     )
-    projector_options = ["Automatisch", "Gruppenphase", "Qualifikation", "Hauptfeld", "Nebenfeld", "KO-Felder"]
+    projector_options = ["Automatisch", "Gruppephase", "Qualifikatioun", "Haapttableau", "Niewentableau", "KO-Felder"]
     current_projector = data["settings"].get("projector_view", "Automatisch")
     if current_projector not in projector_options:
         current_projector = "Automatisch"
     previous_projector = current_projector
     selected_projector = st.selectbox(
-        "Beamer zeigt",
+        "Beamer weist",
         projector_options,
         index=projector_options.index(current_projector),
     )
@@ -2483,7 +2483,7 @@ def render_projector_groups(data: dict[str, Any]) -> None:
 
 
 def render_projector_brackets(data: dict[str, Any], active_bracket: str) -> None:
-    if active_bracket == "Nebenfeld":
+    if active_bracket == "Niewentableau":
         render_side_tree(data, projector=True)
     else:
         render_main_tree(data, projector=True)
@@ -2503,16 +2503,16 @@ def render_projector_qualification(data: dict[str, Any]) -> None:
         <div class="projector-qualification">
             <div class="projector-zoom-content projector-qualification-content">
                 <section>
-                    <h2>Hauptfeld</h2>
+                    <h2>Haapttableau</h2>
                     <table class="ts-table projector-table">
-                        <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
+                        <thead><tr><th>Klass</th><th>Grupp</th><th>Rang</th></tr></thead>
                         <tbody>{rows(main)}</tbody>
                     </table>
                 </section>
                 <section>
-                    <h2>Nebenfeld</h2>
+                    <h2>Niewentableau</h2>
                     <table class="ts-table projector-table">
-                        <thead><tr><th>Klasse</th><th>Gruppe</th><th>Rang</th></tr></thead>
+                        <thead><tr><th>Klass</th><th>Grupp</th><th>Rang</th></tr></thead>
                         <tbody>{rows(side)}</tbody>
                     </table>
                 </section>
@@ -2526,16 +2526,16 @@ def render_projector_qualification(data: dict[str, Any]) -> None:
 def projector_view(data: dict[str, Any]) -> None:
     view_setting = data["settings"].get("projector_view", "Automatisch")
     active_bracket = ""
-    display_label = "Gruppenphase"
+    display_label = "Gruppephase"
     if view_setting == "Automatisch":
         display_label, active_bracket = auto_projector_display(data)
-    elif view_setting == "Qualifikation":
-        display_label = "Qualifikation"
-    elif view_setting in ["Hauptfeld", "Nebenfeld"]:
+    elif view_setting == "Qualifikatioun":
+        display_label = "Qualifikatioun"
+    elif view_setting in ["Haapttableau", "Niewentableau"]:
         active_bracket = view_setting
         display_label = view_setting
     elif view_setting == "KO-Felder":
-        active_bracket = "Hauptfeld" if int(time.time() // 15) % 2 == 0 else "Nebenfeld"
+        active_bracket = "Haapttableau" if int(time.time() // 15) % 2 == 0 else "Niewentableau"
         display_label = active_bracket
 
     if st.query_params.get("view") == "beamer":
@@ -2544,15 +2544,15 @@ def projector_view(data: dict[str, Any]) -> None:
     st.markdown(
         f"""
         <div class="projector-title">
-            <h1>{escape(data["settings"].get("event_title", "Schulfestturnier"))}</h1>
+            <h1>{escape(data["settings"].get("event_title", "Schoulfest"))}</h1>
             <span>{escape(display_label)}</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    if display_label == "Gruppenphase":
+    if display_label == "Gruppephase":
         render_projector_groups(data)
-    elif display_label == "Qualifikation":
+    elif display_label == "Qualifikatioun":
         render_projector_qualification(data)
     else:
         render_projector_brackets(data, active_bracket)
@@ -2567,29 +2567,29 @@ if hasattr(st, "fragment"):
 
 
 def sidebar(data: dict[str, Any]) -> tuple[str, str]:
-    st.sidebar.markdown("## Schulfest Turnier")
+    st.sidebar.markdown("## Schoulfest")
     page = st.sidebar.radio(
         "Navigation",
         [
             "Start / Teams",
-            "Gruppenphase",
-            "Qualifikation",
+            "Gruppephase",
+            "Qualifikatioun",
             "K.O.-Felder",
             "Laufende Spiele",
             "Einstellungen",
         ],
         label_visibility="collapsed",
     )
-    field = "Hauptfeld"
+    field = "Haapttableau"
     if page == "K.O.-Felder":
-        field = st.sidebar.radio("Feld", ["Hauptfeld", "Nebenfeld"], label_visibility="collapsed")
+        field = st.sidebar.radio("Feld", ["Haapttableau", "Niewentableau"], label_visibility="collapsed")
     st.sidebar.markdown(
         '<a class="beamer-link" href="?view=beamer" target="_blank">Beamer-Modus öffnen</a>',
         unsafe_allow_html=True,
     )
     st.sidebar.caption(
         "Status: "
-        + ("KO-Phase" if data["settings"].get("draw_done") else "Gruppenphase")
+        + ("KO-Phase" if data["settings"].get("draw_done") else "Gruppephase")
         + (" · gesperrt" if data["settings"].get("group_locked") else "")
     )
     return page, field
@@ -2605,11 +2605,11 @@ def dashboard_metrics(data: dict[str, Any]) -> None:
     st.markdown(
         f"""
         <div class="metric-strip">
-            <div class="metric-box"><b>{played}/{total}</b><span>Gruppenspiele eingetragen</span></div>
-            <div class="metric-box"><b>{len(main)}</b><span>Hauptfeld-Slots</span></div>
-            <div class="metric-box"><b>{len(side)}</b><span>Nebenfeld-Slots</span></div>
-            <div class="metric-box"><b>{escape(team_name(data, main_winner))}</b><span>Sieger Hauptfeld</span></div>
-            <div class="metric-box"><b>{escape(team_name(data, side_winner))}</b><span>Sieger Nebenfeld</span></div>
+            <div class="metric-box"><b>{played}/{total}</b><span>Gruppnspiele eingetragen</span></div>
+            <div class="metric-box"><b>{len(main)}</b><span>Haapttableau-Slots</span></div>
+            <div class="metric-box"><b>{len(side)}</b><span>Niewentableau-Slots</span></div>
+            <div class="metric-box"><b>{escape(team_name(data, main_winner))}</b><span>Sieger Haapttableau</span></div>
+            <div class="metric-box"><b>{escape(team_name(data, side_winner))}</b><span>Sieger Niewentableau</span></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2618,7 +2618,7 @@ def dashboard_metrics(data: dict[str, Any]) -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Schulfestturnier",
+        page_title="Schoulfest",
         page_icon="🏆",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -2709,7 +2709,7 @@ def main() -> None:
     st.markdown(
         f"""
         <div class="app-topbar">
-            <h1>{escape(data["settings"].get("event_title", "Schulfestturnier"))} Verwaltung</h1>
+            <h1>{escape(data["settings"].get("event_title", "Schoulfest"))} Verwaltung</h1>
             <a href="?view=beamer" target="_blank">Beamer-Modus</a>
         </div>
         """,
@@ -2719,11 +2719,11 @@ def main() -> None:
 
     if page == "Start / Teams":
         setup_tab(data)
-    elif page == "Gruppenphase":
+    elif page == "Gruppephase":
         groups_tab(data)
-    elif page == "Qualifikation":
+    elif page == "Qualifikatioun":
         qualification_tab(data)
-    elif page == "K.O.-Felder" and field == "Hauptfeld":
+    elif page == "K.O.-Felder" and field == "Haapttableau":
         main_bracket_tab(data)
     elif page == "K.O.-Felder":
         side_bracket_tab(data)
