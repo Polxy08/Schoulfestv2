@@ -217,7 +217,7 @@ def reset_tournament_state(current: dict[str, Any] | None = None) -> dict[str, A
             for team in fresh["groups"][group_id]["teams"]:
                 if old_names.get(team["id"]):
                     team["name"] = old_names[team["id"]]
-       for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_offsets", "projector_background"]:
+        for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_offsets", "projector_background"]:
             if key in current.get("settings", {}):
                 fresh["settings"][key] = current["settings"][key]
     save_data(fresh)
