@@ -1713,7 +1713,6 @@ def build_side_state(data: dict[str, Any]) -> list[tuple[str, list[dict[str, Any
 
 def setup_tab(data: dict[str, Any]) -> None:
     render_header(data, "Setup: Klassen und Gruppen")
-    st.write("Hier kannst du die Klassen- und Joergangn eintragen. Bonuspunkte bleiben in der Gruppephase, damit alles uebersichtlich bleibt.")
     locked = bool(data["settings"].get("group_locked", False))
     if locked:
         st.info("Gespart - Draw schon gemaach")
@@ -1729,7 +1728,7 @@ def setup_tab(data: dict[str, Any]) -> None:
     st.subheader("Aktuelle Aufteilung")
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**Haapttableaueau**")
+        st.markdown("**Haapttableau**")
         render_table(["Klass", "Grupp", "Rang", "Punkte"], [[item["name"], item["group"], item["rank"], f'{item["points"]:g}'] for item in main])
     with cols[1]:
         st.markdown("**Niewentableau**")
