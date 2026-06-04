@@ -89,6 +89,7 @@ def default_data() -> dict[str, Any]:
             "projector_auto_started_at": 0.0,
             "projector_auto_start_view": "Gruppenphase",
             "projector_zoom": 1.0,
+            "projector_zooms": {view: 1.0 for view in PROJECTOR_OFFSET_VIEWS},
             "projector_offset_x": 0,
             "projector_offset_y": 0,
              "projector_offsets": {view: {"x": 0, "y": 0} for view in PROJECTOR_OFFSET_VIEWS},
@@ -129,6 +130,7 @@ def deep_merge(default: Any, loaded: Any) -> Any:
 
 def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     loaded_settings = data.get("settings", {}) if isinstance(data, dict) else {}
+    loaded_has_view_zooms = isinstance(loaded_settings.get("projector_zooms"), dict)
     loaded_has_view_offsets = isinstance(loaded_settings.get("projector_offsets"), dict)
     normalized = deep_merge(default_data(), data)
     for config in GROUP_CONFIG:
@@ -166,6 +168,16 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized["settings"].setdefault("projector_auto_started_at", 0.0)
     normalized["settings"].setdefault("projector_auto_start_view", "Gruppenphase")
     normalized["settings"].setdefault("projector_zoom", 1.0)
+    legacy_zoom = max(0.50, min(5.00, float(normalized["settings"].get("projector_zoom", 1.0) or 1.0)))
+    zooms = normalized["settings"].get("projector_zooms", {})
+    if not isinstance(zooms, dict):
+        zooms = {}
+    for view in PROJECTOR_OFFSET_VIEWS:
+        if not loaded_has_view_zooms:
+            zooms[view] = legacy_zoom
+        else:
+            zooms[view] = max(0.50, min(5.00, float(zooms.get(view, legacy_zoom) or legacy_zoom)))
+    normalized["settings"]["projector_zooms"] = zooms
     normalized["settings"].setdefault("projector_offset_x", 0)
     normalized["settings"].setdefault("projector_offset_y", 0)
     legacy_x = int(float(normalized["settings"].get("projector_offset_x", 0) or 0))
@@ -217,7 +229,7 @@ def reset_tournament_state(current: dict[str, Any] | None = None) -> dict[str, A
             for team in fresh["groups"][group_id]["teams"]:
                 if old_names.get(team["id"]):
                     team["name"] = old_names[team["id"]]
-        for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_offsets", "projector_background"]:
+        for key in ["event_title", "projector_zoom", "projector_zooms", "projector_offset_x", "projector_offset_y", "projector_offsets", "projector_background"]:
             if key in current.get("settings", {}):
                 fresh["settings"][key] = current["settings"][key]
     save_data(fresh)
@@ -2301,27 +2313,29 @@ def settings_tab(data: dict[str, Any]) -> None:
             st.success("Beamer-Automatik neu gestartet.")
 
     st.markdown("**Beamer-Layout**")
-    zoom_value = float(data["settings"].get("projector_zoom", 1.0) or 1.0)
-    data["settings"]["projector_zoom"] = st.slider(
-        "Beamer-Zoom",
-        min_value=0.50,
-        max_value=5.00,
-        value=max(0.50, min(5.00, zoom_value)),
-        step=0.05,
-    )
-    st.caption("Position je Beamer-Seite. Positive X-Werte schieben nach rechts, positive Y-Werte nach unten.")
+    st.caption("Zoom und Position je Beamer-Seite. Positive X-Werte schieben nach rechts, positive Y-Werte nach unten.")
+    zooms = data["settings"].setdefault("projector_zooms", {})
     offsets = data["settings"].setdefault("projector_offsets", {})
     for view_name in PROJECTOR_OFFSET_VIEWS:
+        current_zoom = max(0.50, min(5.00, float(zooms.get(view_name, data["settings"].get("projector_zoom", 1.0)) or 1.0)))
         current_offset = offsets.setdefault(view_name, {"x": 0, "y": 0})
-        offset_cols = st.columns([1.2, 1, 1])
-        offset_cols[0].markdown(f"**{view_name}**")
-        current_offset["x"] = offset_cols[1].number_input(
+        layout_cols = st.columns([1.2, 1, 1, 1])
+        layout_cols[0].markdown(f"**{view_name}**")
+        zooms[view_name] = layout_cols[1].slider(
+            "Zoom",
+            min_value=0.50,
+            max_value=5.00,
+            value=current_zoom,
+            step=0.05,
+            key=f"projector_zoom_{view_name}",
+        )
+        current_offset["x"] = layout_cols[2].number_input(
             "X (px)",
             value=int(float(current_offset.get("x", 0) or 0)),
             step=10,
             key=f"projector_offset_x_{view_name}",
         )
-        current_offset["y"] = offset_cols[2].number_input(
+        current_offset["y"] = layout_cols[3].number_input(
             "Y (px)",
             value=int(float(current_offset.get("y", 0) or 0)),
             step=10,
@@ -2382,8 +2396,16 @@ def projector_offset_for_view(data: dict[str, Any], view_name: str) -> tuple[int
     )
 
 
+def projector_zoom_for_view(data: dict[str, Any], view_name: str) -> float:
+    zooms = data["settings"].get("projector_zooms", {})
+    if not isinstance(zooms, dict):
+        zooms = {}
+    fallback = data["settings"].get("projector_zoom", 1.0)
+    return max(0.50, min(5.00, float(zooms.get(view_name, fallback) or fallback or 1.0)))
+
+
 def projector_runtime_css(data: dict[str, Any], view_name: str) -> None:
-    zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
+    zoom = projector_zoom_for_view(data, view_name)
     offset_x, offset_y = projector_offset_for_view(data, view_name)
     background = str(data["settings"].get("projector_background", "") or "")
     if background:
