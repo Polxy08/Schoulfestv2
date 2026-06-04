@@ -43,7 +43,6 @@ SIDE_R1 = [
 ]
 
 STATUS_OPTIONS = ["offen", "angesetzt", "laeuft", "fertig", "verschoben"]
-PROJECTOR_OFFSET_VIEWS = ["Gruppenphase", "Qualifikation", "Hauptfeld", "Nebenfeld"]
 
 
 def generate_group_matches(group_id: str, team_ids: list[str]) -> list[dict[str, Any]]:
@@ -91,7 +90,6 @@ def default_data() -> dict[str, Any]:
             "projector_zoom": 1.0,
             "projector_offset_x": 0,
             "projector_offset_y": 0,
-            "projector_offsets": {view: {"x": 0, "y": 0} for view in PROJECTOR_OFFSET_VIEWS},
             "projector_background": "",
             "group_locked": False,
             "draw_done": False,
@@ -128,8 +126,6 @@ def deep_merge(default: Any, loaded: Any) -> Any:
 
 
 def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
-    loaded_settings = data.get("settings", {}) if isinstance(data, dict) else {}
-    loaded_has_view_offsets: bool = isinstance(loaded_settings.get("projector_offsets"), dict)
     normalized = deep_merge(default_data(), data)
     for config in GROUP_CONFIG:
         group = normalized["groups"][config["id"]]
@@ -168,24 +164,6 @@ def normalize_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized["settings"].setdefault("projector_zoom", 1.0)
     normalized["settings"].setdefault("projector_offset_x", 0)
     normalized["settings"].setdefault("projector_offset_y", 0)
-    legacy_x = int(float(normalized["settings"].get("projector_offset_x", 0) or 0))
-    legacy_y = int(float(normalized["settings"].get("projector_offset_y", 0) or 0))
-    offsets = normalized["settings"].get("projector_offsets", {})
-    if not isinstance(offsets, dict):
-        offsets = {}
-    for view in PROJECTOR_OFFSET_VIEWS:
-        current = offsets.get(view, {})
-        if not isinstance(current, dict):
-            current = {}
-        if not loaded_has_view_offsets:
-            current = {}
-        fallback_x = legacy_x if not loaded_has_view_offsets else 0
-        fallback_y = legacy_y if not loaded_has_view_offsets else 0
-        offsets[view] = {
-            "x": int(float(current.get("x", fallback_x) or 0)),
-            "y": int(float(current.get("y", fallback_y) or 0)),
-        }
-    normalized["settings"]["projector_offsets"] = offsets
     normalized["settings"].setdefault("projector_background", "")
     normalized["settings"].setdefault("bracket_pdf_path", "")
     normalized.setdefault("schedule", {})
@@ -217,7 +195,7 @@ def reset_tournament_state(current: dict[str, Any] | None = None) -> dict[str, A
             for team in fresh["groups"][group_id]["teams"]:
                 if old_names.get(team["id"]):
                     team["name"] = old_names[team["id"]]
-        for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_offsets", "projector_background"]:
+        for key in ["event_title", "projector_zoom", "projector_offset_x", "projector_offset_y", "projector_background"]:
             if key in current.get("settings", {}):
                 fresh["settings"][key] = current["settings"][key]
     save_data(fresh)
@@ -2309,24 +2287,17 @@ def settings_tab(data: dict[str, Any]) -> None:
         value=max(0.50, min(5.00, zoom_value)),
         step=0.05,
     )
-    st.caption("Position je Beamer-Seite. Positive X-Werte schieben nach rechts, positive Y-Werte nach unten.")
-    offsets = data["settings"].setdefault("projector_offsets", {})
-    for view_name in PROJECTOR_OFFSET_VIEWS:
-        current_offset = offsets.setdefault(view_name, {"x": 0, "y": 0})
-        offset_cols = st.columns([1.2, 1, 1])
-        offset_cols[0].markdown(f"**{view_name}**")
-        current_offset["x"] = offset_cols[1].number_input(
-            "X (px)",
-            value=int(float(current_offset.get("x", 0) or 0)),
-            step=10,
-            key=f"projector_offset_x_{view_name}",
-        )
-        current_offset["y"] = offset_cols[2].number_input(
-            "Y (px)",
-            value=int(float(current_offset.get("y", 0) or 0)),
-            step=10,
-            key=f"projector_offset_y_{view_name}",
-        )
+    offset_cols = st.columns(2)
+    data["settings"]["projector_offset_x"] = offset_cols[0].number_input(
+        "Beamer-Position X (px)",
+        value=int(float(data["settings"].get("projector_offset_x", 0) or 0)),
+        step=10,
+    )
+    data["settings"]["projector_offset_y"] = offset_cols[1].number_input(
+        "Beamer-Position Y (px)",
+        value=int(float(data["settings"].get("projector_offset_y", 0) or 0)),
+        step=10,
+    )
     background_upload = st.file_uploader("Beamer-Hintergrundbild", type=["png", "jpg", "jpeg", "webp"])
     if background_upload is not None:
         mime = background_upload.type or "image/png"
@@ -2367,24 +2338,10 @@ def settings_tab(data: dict[str, Any]) -> None:
             st.error("Das Backup konnte nicht gelesen werden.")
 
 
-def projector_offset_for_view(data: dict[str, Any], view_name: str) -> tuple[int, int]:
-    offsets = data["settings"].get("projector_offsets", {})
-    if not isinstance(offsets, dict):
-        offsets = {}
-    current_offset = offsets.get(view_name, {})
-    if not isinstance(current_offset, dict):
-        current_offset = {}
-    fallback_x = data["settings"].get("projector_offset_x", 0)
-    fallback_y = data["settings"].get("projector_offset_y", 0)
-    return (
-        int(float(current_offset.get("x", fallback_x) or 0)),
-        int(float(current_offset.get("y", fallback_y) or 0)),
-    )
-
-
-def projector_runtime_css(data: dict[str, Any], view_name: str) -> None:
+def projector_runtime_css(data: dict[str, Any]) -> None:
     zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
-    offset_x, offset_y = projector_offset_for_view(data, view_name)
+    offset_x = int(float(data["settings"].get("projector_offset_x", 0) or 0))
+    offset_y = int(float(data["settings"].get("projector_offset_y", 0) or 0))
     background = str(data["settings"].get("projector_background", "") or "")
     if background:
         surface_background = (
@@ -2502,6 +2459,8 @@ def render_projector_qualification(data: dict[str, Any]) -> None:
 
 
 def projector_view(data: dict[str, Any]) -> None:
+    if st.query_params.get("view") == "beamer":
+        projector_runtime_css(data)
     view_setting = data["settings"].get("projector_view", "Automatisch")
     active_bracket = ""
     display_label = "Gruppenphase"
@@ -2516,9 +2475,6 @@ def projector_view(data: dict[str, Any]) -> None:
         active_bracket = "Hauptfeld" if int(time.time() // 15) % 2 == 0 else "Nebenfeld"
         display_label = active_bracket
 
-    if st.query_params.get("view") == "beamer":
-        projector_runtime_css(data, display_label)
-    
     st.markdown(
         f"""
         <div class="projector-title">
@@ -2604,7 +2560,7 @@ def main() -> None:
     css()
     data = init_state()
     if st.query_params.get("view") == "beamer":
-         projector_zoom = max(0.50, min(5.00, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
+        projector_zoom = max(0.60, min(1.20, float(data["settings"].get("projector_zoom", 1.0) or 1.0)))
         projector_background = str(data["settings"].get("projector_background", "") or "")
         if projector_background:
             projector_background_css = (
