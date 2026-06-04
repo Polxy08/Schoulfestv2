@@ -2515,10 +2515,8 @@ def projector_view(data: dict[str, Any]) -> None:
     elif view_setting == "KO-Felder":
         active_bracket = "Hauptfeld" if int(time.time() // 15) % 2 == 0 else "Nebenfeld"
         display_label = active_bracket
-
 if st.query_params.get("view") == "beamer":
         projector_runtime_css(data, display_label)
-
     st.markdown(
         f"""
         <div class="projector-title">
