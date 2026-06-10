@@ -881,8 +881,8 @@ def css() -> None:
         }
 
         .projector-qualification h2 {
-            background: #343943;
-            color: #ffffff;
+            background: #ffffff;
+            color: #344054;
             font-size: clamp(1.4rem, 2vw, 2.4rem);
             margin: 0;
             padding: 14px 18px;
