@@ -886,7 +886,7 @@ def css() -> None:
             font-size: clamp(1.4rem, 2vw, 2.4rem);
             margin: 0;
             padding: 14px 18px;
-            border-bottom: 1px solid #d0d5dd;
+            border-bottom: 3px solid #d0d5dd;
         }
 
         .projector-qualification .ts-table {
